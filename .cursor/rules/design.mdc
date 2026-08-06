@@ -1,0 +1,101 @@
+---
+name: Relay Design System
+description: Single design system for colors, type, layout, and how to apply them in the app
+alwaysApply: true
+
+colors:
+  Primary Background: #000000
+  Secondary Background: #111111
+  Surface: #1A1A1A
+  Border: #2A2A2A
+  Primary Text: #FFFFFF
+  Secondary Text: #A1A1AA
+  Placeholder: #71717A
+  Success: #22C55E
+  Error: #EF4444
+  Accent: #3B82F6
+
+typography:
+  headline-lg:
+    fontFamily: Inter
+    fontSize: 32px
+    fontWeight: "700"
+    lineHeight: 40px
+    letterSpacing: -0.02em
+  headline-lg-mobile:
+    fontFamily: Inter
+    fontSize: 26px
+    fontWeight: "700"
+    lineHeight: 32px
+    letterSpacing: -0.01em
+  headline-md:
+    fontFamily: Inter
+    fontSize: 24px
+    fontWeight: "600"
+    lineHeight: 32px
+  headline-sm:
+    fontFamily: Inter
+    fontSize: 20px
+    fontWeight: "600"
+    lineHeight: 28px
+  body-lg:
+    fontFamily: Inter
+    fontSize: 18px
+    fontWeight: "400"
+    lineHeight: 28px
+  body-md:
+    fontFamily: Inter
+    fontSize: 16px
+    fontWeight: "400"
+    lineHeight: 24px
+  label-lg:
+    fontFamily: Inter
+    fontSize: 14px
+    fontWeight: "700"
+    lineHeight: 20px
+    letterSpacing: 0.02em
+  label-sm:
+    fontFamily: Inter
+    fontSize: 12px
+    fontWeight: "600"
+    lineHeight: 16px
+
+font-weights:
+  regular: 400
+  medium: 500
+  semibold: 600
+  bold: 700
+
+radius:
+  sm: 4
+  DEFAULT: 8
+  Buttons: 12
+  Inputs: 12
+  Cards: 16
+  Bottom Sheet: 24
+
+spacing:
+  base: 8px
+  container-padding-mobile: 20px
+  container-padding-desktop: 64px
+  gutter: 16px
+  stack-sm: 12px
+  stack-md: 24px
+  stack-lg: 48px
+---
+
+# Design system (source of truth)
+
+Code tokens live in `src/app/theme/tokens.js` (must stay in sync with this file’s frontmatter).  
+Do not invent new colors/fonts/radii.
+
+## Cross-platform & responsive (required)
+
+Every new or updated UI must work on **Android and iOS**, and on **small phones and large devices (tablets)**.
+
+- **Platforms:** Prefer React Native / Tailwind primitives that behave the same on both OS. Avoid Android-only or iOS-only layout hacks unless wrapped in `Platform.select` / `Platform.OS` with a matching fallback. Test safe areas (`SafeAreaView` / `useSafeAreaInsets`) on both notches and system bars.
+- **Small screens:** Default layouts to phone widths; use flexible sizing (`flex`, `%`, `useWindowDimensions`) — never hardcode widths that clip on ~320–360dp devices. Keep horizontal padding (`px-container-mobile` / 20). Ensure text wraps; avoid fixed heights that truncate copy.
+- **Tablets / large screens:** Don’t stretch phone layouts edge-to-edge into unreadable lines. Cap content width, use multi-column / centered max-width where appropriate, scale type with `headline-lg` vs `headline-lg-mobile`, and increase spacing (`stack-md` / `stack-lg`) on wide viewports. Prefer `md:` / width breakpoints via `tw` or dimension checks (e.g. width ≥ 768) over one fixed layout.
+- **Touch & input:** Min touch `48` / buttons `52` on all devices; input font size ≥ 16 to prevent iOS zoom. Respect keyboard avoiding on both platforms.
+- **Assets:** Images/icons must scale (`resizeMode`, responsive dimensions); no assumptions that only phone density exists.
+- When creating or updating a screen/component, verify it remains usable in portrait on phones and on tablet-sized widths without overflow or sparse broken layout.

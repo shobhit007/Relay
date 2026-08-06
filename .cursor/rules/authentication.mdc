@@ -1,0 +1,49 @@
+# Authentication Architecture
+
+Splash
+
+↓
+
+Load Tokens
+
+↓
+
+No Tokens?
+
+↓
+
+Auth Stack
+
+Register
+
+or
+
+Login
+
+↓
+
+Save Tokens
+
+↓
+
+Fetch & Sync Current User
+
+↓
+
+Persist User Locally
+
+↓
+
+Home Stack
+
+---
+
+Tokens Exist
+
+↓
+
+Validate Session
+
+↓
+
+Home Stack

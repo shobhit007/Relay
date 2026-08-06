@@ -1,0 +1,36 @@
+---
+description: Feature-based architecture and shared-layer boundaries
+alwaysApply: true
+---
+
+# Project Architecture
+
+- Follow Feature-Based Architecture.
+- Every feature contains only what it needs (no empty folders):
+  - api/ · components/ · hooks/ · screens/ · services/ · types/ · utils/ · assets/
+
+- **Feature assets:** if an image is used only by one feature, keep it under `src/features/<name>/assets/` and require it relatively from that feature. Shared brand assets (logo, spinner, onboarding art, etc.) stay in `src/assets/` and are consumed via `IMAGES` from `@shared/constants`.
+- Shared code lives under `src/shared/` (organized by use):
+  - `api/` — Axios client + errors`business/` · `services/` (legacy HTTP helpers)
+  - `components/` — shared UI for features.
+  - `ui/` - shared UI elements (input, button etc.).
+- Core shell lives under `src/core/`:
+  - `context/` — app-owned providers/hooks
+  - `providers/` — `AppProviders` composition (SafeArea, Keyboard)
+  - `storage/secure-store/` — SecureStore infrastructure + public token-storage
+  - `App.js` is entry + SDK bootstrap only;
+- **Theme:** colors, fonts, spacing, radius etc. only in `@app/theme/tokens`.
+- Features import from `@shared/*`, their own `@features/<name>/*`, and the public core storage surface `@/core/storage/secure-store` — never from root `@utils`, `@components`.
+- Never import from another feature except through that feature’s public `index` exports.
+
+# Secure storage
+
+- `expo-secure-store` and `src/core/storage/secure-store/secureStore.ts` are **private**. Do not import them from features, shared, or anywhere else.
+- Public API is **only** `@/core/storage/secure-store` (`token-storage`: `saveTokens`, `getAccessToken`, `getRefreshToken`, `deleteTokens`).
+- Axios (`@/shared/api`) attaches the access token via `getAccessToken` on authenticated requests.
+- Auth flows persist/clear tokens with `saveTokens` / `deleteTokens` — never by calling SecureStore directly.
+
+# Navigation Stack
+
+- `Auth Stack` for login/register screen, when user is not logged in.
+- `Home Stack` is **Bottom Tabs** for Chats and About screens after logged in.
