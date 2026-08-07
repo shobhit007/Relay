@@ -86,7 +86,8 @@ spacing:
 
 # Design system (source of truth)
 
-Code tokens live in `src/app/theme/tokens.js` (must stay in sync with this file’s frontmatter).  
+Code tokens live in `src/theme/tokens.js` (must stay in sync with this file’s frontmatter).  
+Import via `@app/theme/tokens`. Tokens stay outside `src/app` so Expo Router does not treat them as routes.  
 Do not invent new colors/fonts/radii.
 
 ## Cross-platform & responsive (required)

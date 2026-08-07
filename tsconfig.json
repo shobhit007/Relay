@@ -6,6 +6,15 @@
       "@/*": [
         "./src/*"
       ],
+      "@app/theme": [
+        "./src/theme"
+      ],
+      "@app/theme/*": [
+        "./src/theme/*"
+      ],
+      "@app/*": [
+        "./src/app/*"
+      ],
       "@/assets/*": [
         "./assets/*"
       ]
