@@ -2,6 +2,7 @@ import { Redirect, Tabs } from "expo-router";
 
 import { useAuth } from "@/core/context/AuthContext";
 import { colors, textStyle } from "@app/theme/tokens";
+import { Icon } from "@shared/ui";
 
 export default function HomeLayout() {
   const { status } = useAuth();
@@ -21,7 +22,7 @@ export default function HomeLayout() {
           backgroundColor: colors.secondaryBackground,
           borderTopColor: colors.border,
         },
-        tabBarActiveTintColor: colors.accent,
+        tabBarActiveTintColor: colors.primaryText,
         tabBarInactiveTintColor: colors.secondaryText,
         tabBarLabelStyle: textStyle("label-sm"),
         sceneStyle: { backgroundColor: colors.primaryBackground },
@@ -31,12 +32,18 @@ export default function HomeLayout() {
         name="chats"
         options={{
           title: "Chats",
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="MessageCircle" size={size} color={color} />
+          ),
         }}
       />
       <Tabs.Screen
         name="about"
         options={{
           title: "About",
+          tabBarIcon: ({ color, size }) => (
+            <Icon name="UserRound" size={size} color={color} />
+          ),
         }}
       />
     </Tabs>
