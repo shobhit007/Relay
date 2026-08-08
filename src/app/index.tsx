@@ -1,29 +1,17 @@
-import { Text, useWindowDimensions, View } from 'react-native';
+import { Redirect } from 'expo-router';
 
-import { colors, layout, spacing, textStyle } from '@app/theme/tokens';
+import { useAuth } from '@/core/context/AuthContext';
 
 export default function Index() {
-  const { width } = useWindowDimensions();
-  const isTablet = width >= layout.tabletBreakpoint;
-  const headline = textStyle(isTablet ? 'headline-lg' : 'headline-lg-mobile');
-  const body = textStyle('body-md');
+  const { status } = useAuth();
 
-  return (
-    <View
-      style={{
-        flex: 1,
-        backgroundColor: colors.primaryBackground,
-        paddingHorizontal: spacing.containerPaddingMobile,
-        paddingVertical: spacing.stackMd,
-        alignItems: 'center',
-      }}
-    >
-      <View style={{ width: '100%', maxWidth: layout.maxContentWidth, gap: spacing.stackSm }}>
-        <Text style={{ ...headline, color: colors.primaryText }}>Relay</Text>
-        <Text style={{ ...body, color: colors.secondaryText }}>
-          Design tokens are active across the app.
-        </Text>
-      </View>
-    </View>
-  );
+  if (status === 'loading') {
+    return null;
+  }
+
+  if (status === 'authenticated') {
+    return <Redirect href="/(home)/chats" />;
+  }
+
+  return <Redirect href="/(auth)/welcome" />;
 }

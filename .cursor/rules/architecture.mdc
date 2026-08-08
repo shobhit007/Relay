@@ -20,7 +20,7 @@ alwaysApply: true
   - `storage/secure-store/` — SecureStore infrastructure + public token-storage
   - `App.js` is entry + SDK bootstrap only;
 - **Theme:** colors, typography, spacing, radius, touch, layout only in [`src/theme/tokens.js`](src/theme/tokens.js) (`@app/theme/tokens`). Must stay in sync with `.cursor/rules/design.mdc`. Do not invent new tokens. Use `textStyle(variant)` for RN text styles (maps Inter weights to loaded font faces). Keep theme outside `src/app` so Expo Router does not register it as a route.
-- Features import from `@shared/*`, their own `@features/<name>/*`, `@app/theme/*`, and the public core storage surface `@/core/storage/secure-store` — never from root `@utils`, `@components`.
+- Features import from `@shared/*`, their own `@features/<name>/*`, `@app/theme/*`, `@/core/context/*`, and the public core storage surface `@/core/storage/secure-store` — never from root `@utils`, `@components`.
 - Never import from another feature except through that feature’s public `index` exports.
 
 # Secure storage
@@ -32,5 +32,6 @@ alwaysApply: true
 
 # Navigation Stack
 
-- `Auth Stack` for login/register screen, when user is not logged in.
-- `Home Stack` is **Bottom Tabs** for Chats and About screens after logged in.
+- `Auth Stack` (`(auth)`): Welcome, Login, Signup — when user is not logged in.
+- `Home Stack` (`(home)`): **Bottom Tabs** for Chats and About after logged in.
+- Root `index` redirects by auth status; splash waits for fonts + auth bootstrap.

@@ -14,11 +14,7 @@ No Tokens?
 
 Auth Stack
 
-Register
-
-or
-
-Login
+Welcome → Register or Login
 
 ↓
 
@@ -26,11 +22,7 @@ Save Tokens
 
 ↓
 
-Fetch & Sync Current User
-
-↓
-
-Persist User Locally
+Set Current User (memory)
 
 ↓
 
@@ -42,8 +34,29 @@ Tokens Exist
 
 ↓
 
-Validate Session
+Validate Session (`GET /users/me`)
 
 ↓
 
 Home Stack
+
+```mermaid
+flowchart TD
+  Splash[index splash gate] --> LoadTokens[Load tokens]
+  LoadTokens -->|none| AuthStack[Auth Stack]
+  LoadTokens -->|present| Validate["GET /users/me"]
+  Validate -->|ok| HomeStack[Home Tabs]
+  Validate -->|401/fail| ClearTokens[deleteTokens] --> AuthStack
+  AuthStack --> Welcome
+  Welcome --> Login
+  Welcome --> Signup
+  Login -->|saveTokens + setUser| HomeStack
+  Signup -->|saveTokens + setUser| HomeStack
+```
+
+## Notes
+
+- User profile is **in-memory only** (AuthContext). Cold start with tokens always revalidates via `/users/me`.
+- Tokens live in secure token-storage (`saveTokens` / `deleteTokens`).
+- Do not implement axios refresh-token retry until explicitly added.
+- Set `EXPO_PUBLIC_API_URL` for the API host (Android emulator often `http://10.0.2.2:8080`).
