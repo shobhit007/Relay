@@ -1,28 +1,32 @@
-import { useState } from 'react';
+import { useState } from "react";
 import {
   Pressable,
   TextInput,
   View,
-  type TextInputProps,
   type StyleProp,
+  type TextInputProps,
   type ViewStyle,
-} from 'react-native';
+} from "react-native";
 
-import { colors, radius, spacing, textStyle, touch } from '@app/theme/tokens';
+import { colors, radius, spacing, textStyle, touch } from "@app/theme/tokens";
 
-import { AppText } from './AppText';
+import { AppText } from "./AppText";
 
-type TextFieldProps = Omit<TextInputProps, 'style'> & {
+type TextFieldProps = Omit<TextInputProps, "style"> & {
   label: string;
+  /** When false, the visible label is not rendered. Defaults to true. */
+  displayLabel?: boolean;
   error?: string;
   containerStyle?: StyleProp<ViewStyle>;
 };
 
 export function TextField({
   label,
+  displayLabel = true,
   error,
   containerStyle,
   secureTextEntry,
+  accessibilityLabel,
   ...rest
 }: TextFieldProps) {
   const [hidden, setHidden] = useState(Boolean(secureTextEntry));
@@ -30,9 +34,11 @@ export function TextField({
 
   return (
     <View style={[{ gap: spacing.base }, containerStyle]}>
-      <AppText variant="label-lg" color={colors.secondaryText}>
-        {label}
-      </AppText>
+      {displayLabel ? (
+        <AppText variant="label-lg" color={colors.secondaryText}>
+          {label}
+        </AppText>
+      ) : null}
       <View
         style={{
           minHeight: touch.button,
@@ -41,8 +47,8 @@ export function TextField({
           borderColor: error ? colors.error : colors.border,
           backgroundColor: colors.surface,
           paddingHorizontal: spacing.gutter,
-          flexDirection: 'row',
-          alignItems: 'center',
+          flexDirection: "row",
+          alignItems: "center",
           gap: spacing.stackSm,
         }}
       >
@@ -51,8 +57,9 @@ export function TextField({
           secureTextEntry={showToggle ? hidden : false}
           autoCapitalize="none"
           autoCorrect={false}
+          accessibilityLabel={accessibilityLabel ?? label}
           style={[
-            textStyle('body-md'),
+            textStyle("body-md"),
             {
               flex: 1,
               color: colors.primaryText,
@@ -68,10 +75,10 @@ export function TextField({
             accessibilityRole="button"
             hitSlop={8}
             onPress={() => setHidden((value) => !value)}
-            style={{ minHeight: touch.min, justifyContent: 'center' }}
+            style={{ minHeight: touch.min, justifyContent: "center" }}
           >
             <AppText variant="label-sm" color={colors.accent}>
-              {hidden ? 'Show' : 'Hide'}
+              {hidden ? "Show" : "Hide"}
             </AppText>
           </Pressable>
         ) : null}

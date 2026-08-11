@@ -1,4 +1,4 @@
-import type { ReactNode } from 'react';
+import type { ReactNode } from "react";
 import {
   KeyboardAvoidingView,
   Platform,
@@ -6,10 +6,10 @@ import {
   View,
   type StyleProp,
   type ViewStyle,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+} from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, layout, spacing } from '@app/theme/tokens';
+import { colors, layout, spacing } from "@app/theme/tokens";
 
 type ScreenProps = {
   children: ReactNode;
@@ -32,9 +32,9 @@ export function Screen({
     <View
       style={[
         {
-          width: '100%',
+          width: "100%",
           maxWidth: layout.maxContentWidth,
-          alignSelf: 'center',
+          alignSelf: "center",
           flexGrow: 1,
           paddingHorizontal: spacing.containerPaddingMobile,
           paddingTop: spacing.stackMd,
@@ -57,7 +57,7 @@ export function Screen({
         },
         style,
       ]}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
       keyboardVerticalOffset={keyboardVerticalOffset}
     >
       {scroll ? (
