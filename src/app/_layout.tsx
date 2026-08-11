@@ -4,19 +4,19 @@ import {
   Inter_600SemiBold,
   Inter_700Bold,
   useFonts,
-} from '@expo-google-fonts/inter';
-import { Stack } from 'expo-router';
-import * as SplashScreen from 'expo-splash-screen';
-import { StatusBar } from 'expo-status-bar';
-import { useEffect } from 'react';
-import { Platform } from 'react-native';
+} from "@expo-google-fonts/inter";
+import { Stack } from "expo-router";
+import * as SplashScreen from "expo-splash-screen";
+import { StatusBar } from "expo-status-bar";
+import { useEffect } from "react";
+import { Platform } from "react-native";
 
-import { useAuth } from '@/core/context/AuthContext';
-import { AppProviders } from '@/core/providers/AppProviders';
-import { colors } from '@app/theme/tokens';
+import { useAuth } from "@/core/context/AuthContext";
+import { AppProviders } from "@/core/providers/AppProviders";
+import { colors } from "@app/theme/tokens";
 
-if (Platform.OS === 'web') {
-  require('@/global.css');
+if (Platform.OS === "web") {
+  require("@/global.css");
 }
 
 SplashScreen.preventAutoHideAsync();
@@ -31,12 +31,12 @@ function RootNavigator() {
   const { status } = useAuth();
 
   useEffect(() => {
-    if ((fontsLoaded || fontError) && status !== 'loading') {
+    if ((fontsLoaded || fontError) && status !== "loading") {
       SplashScreen.hideAsync();
     }
   }, [fontsLoaded, fontError, status]);
 
-  if ((!fontsLoaded && !fontError) || status === 'loading') {
+  if ((!fontsLoaded && !fontError) || status === "loading") {
     return null;
   }
 
