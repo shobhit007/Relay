@@ -44,7 +44,7 @@ export function SignupScreen() {
         email: email.trim().toLowerCase(),
         password,
       });
-      replaceOnce('/(home)/chats');
+      replaceOnce('/(home)/conversations');
     } catch (error) {
       const message =
         error instanceof ApiError

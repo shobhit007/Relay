@@ -44,5 +44,5 @@ alwaysApply: true
 # Navigation Stack
 
 - `Auth Stack` (`(auth)`): Welcome, Login, Signup — when user is not logged in.
-- `Home Stack` (`(home)`): **Bottom Tabs** for Chats, Search and About after logged in.
+- `Home Stack` (`(home)`): **Bottom Tabs** for Conversations (tab label "Chats"), Search and About after logged in.
 - Root `index` redirects by auth status; splash waits for fonts + auth bootstrap.

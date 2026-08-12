@@ -10,7 +10,7 @@ export default function Index() {
   }
 
   if (status === 'authenticated') {
-    return <Redirect href="/(home)/chats" />;
+    return <Redirect href="/(home)/conversations" />;
   }
 
   return <Redirect href="/(auth)/welcome" />;

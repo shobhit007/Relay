@@ -7,7 +7,7 @@ export default function AuthLayout() {
   const { status } = useAuth();
 
   if (status === "authenticated") {
-    return <Redirect href="/(home)/chats" />;
+    return <Redirect href="/(home)/conversations" />;
   }
 
   return (

@@ -21,15 +21,17 @@ export default function HomeLayout() {
         tabBarStyle: {
           backgroundColor: colors.secondaryBackground,
           borderTopColor: colors.border,
+          marginBottom: 8,
         },
         tabBarActiveTintColor: colors.primaryText,
         tabBarInactiveTintColor: colors.secondaryText,
         tabBarLabelStyle: textStyle("label-sm"),
         sceneStyle: { backgroundColor: colors.primaryBackground },
+        headerShown: false,
       }}
     >
       <Tabs.Screen
-        name="chats"
+        name="conversations"
         options={{
           title: "Chats",
           tabBarIcon: ({ color, size }) => (

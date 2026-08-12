@@ -1,7 +1,7 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 
-import { env } from "@core/env";
 import { getAccessToken } from "@/core/storage/secure-store";
+import { env } from "@core/env";
 
 import { normalizeApiError } from "./errors";
 
