@@ -19,6 +19,7 @@ import type {
   PublicUser,
   RegisterInput,
 } from '@features/auth/types/auth.types';
+import { userService } from '@features/user';
 
 export type AuthStatus = 'loading' | 'authenticated' | 'unauthenticated';
 
@@ -32,8 +33,19 @@ type AuthContextValue = {
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
+async function persistSessionUser(user: PublicUser) {
+  await userService.setSessionUser({
+    id: user.id,
+    username: user.username,
+    displayName: user.displayName,
+    avatarUrl: user.avatarUrl,
+    updatedAt: user.updatedAt,
+  });
+}
+
 async function applySession(user: PublicUser, accessToken: string, refreshToken: string) {
   await saveTokens({ accessToken, refreshToken });
+  await persistSessionUser(user);
   return user;
 }
 
@@ -56,12 +68,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
 
         const me = await getMe();
+        await persistSessionUser(me);
         if (!cancelled) {
           setUser(me);
           setStatus('authenticated');
         }
       } catch {
         await deleteTokens();
+        await userService.clearSession();
         if (!cancelled) {
           setUser(null);
           setStatus('unauthenticated');
@@ -100,6 +114,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = useCallback(async () => {
     await deleteTokens();
+    await userService.clearSession();
     setUser(null);
     setStatus('unauthenticated');
   }, []);

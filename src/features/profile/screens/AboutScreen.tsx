@@ -1,17 +1,21 @@
-import { View } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter } from "expo-router";
+import { View } from "react-native";
 
-import { useAuth } from '@/core/context/AuthContext';
-import { colors, radius, spacing } from '@app/theme/tokens';
-import { AppText, Button, Screen } from '@shared/ui';
+import { useAuth } from "@/core/context/AuthContext";
+import { colors, radius, spacing } from "@app/theme/tokens";
+import { useCurrentUser } from "@features/user";
+import { AppText, Button, Screen } from "@shared/ui";
 
 export function AboutScreen() {
   const router = useRouter();
-  const { user, signOut } = useAuth();
+  const { signOut } = useAuth();
+  const user = useCurrentUser();
+
+  console.log("user", user);
 
   async function onSignOut() {
     await signOut();
-    router.replace('/(auth)/welcome');
+    router.replace("/(auth)/welcome");
   }
 
   return (
@@ -37,12 +41,9 @@ export function AboutScreen() {
           <AppText variant="label-lg" color={colors.secondaryText}>
             Signed in as
           </AppText>
-          <AppText variant="headline-sm">{user?.displayName ?? '—'}</AppText>
+          <AppText variant="headline-sm">{user?.displayName ?? "—"}</AppText>
           <AppText variant="body-md" color={colors.secondaryText}>
-            @{user?.username ?? '—'}
-          </AppText>
-          <AppText variant="body-md" color={colors.secondaryText}>
-            {user?.email ?? '—'}
+            @{user?.username ?? "—"}
           </AppText>
         </View>
 

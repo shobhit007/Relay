@@ -7,7 +7,7 @@ alwaysApply: true
 
 - Follow Feature-Based Architecture.
 - Every feature contains only what it needs (no empty folders):
-  - api/ · components/ · hooks/ · screens/ · services/ · types/ · utils/ · assets/
+  - api/ · components/ · hooks/ · screens/ · services/ · types/ · utils/ · assets/ · db/
 
 - **Feature assets:** if an image is used only by one feature, keep it under `src/features/<name>/assets/` and require it relatively from that feature. Shared brand assets (logo, spinner, onboarding art, etc.) stay in `src/assets/` and are consumed via `IMAGES` from `@shared/constants`.
 - Shared code lives under `src/shared/` (organized by use):
@@ -17,11 +17,21 @@ alwaysApply: true
 - Core shell lives under `src/core/`:
   - `context/` — app-owned providers/hooks
   - `providers/` — `AppProviders` composition (SafeArea, Keyboard)
+  - `db/` — shared SQLite client, migration provider, schema aggregation
   - `storage/secure-store/` — SecureStore infrastructure + public token-storage
   - `App.js` is entry + SDK bootstrap only;
 - **Theme:** colors, typography, spacing, radius, touch, layout only in [`src/theme/tokens.js`](src/theme/tokens.js) (`@app/theme/tokens`). Must stay in sync with `.cursor/rules/design.mdc`. Do not invent new tokens. Use `textStyle(variant)` for RN text styles (maps Inter weights to loaded font faces). Keep theme outside `src/app` so Expo Router does not register it as a route.
-- Features import from `@shared/*`, their own `@features/<name>/*`, `@app/theme/*`, `@/core/context/*`, and the public core storage surface `@/core/storage/secure-store` — never from root `@utils`, `@components`.
+- Features import from `@shared/*`, their own `@features/<name>/*`, `@app/theme/*`, `@/core/context/*`, `@core/db` (client only when inside that feature’s repository), and the public core storage surface `@/core/storage/secure-store` — never from root `@utils`, `@components`.
 - Never import from another feature except through that feature’s public `index` exports.
+
+# Local database
+
+- `@core/db` owns the shared Expo SQLite + Drizzle **client**, `DatabaseProvider` (migrations), and schema **aggregation** only.
+- Feature-owned local data lives under `features/<name>/db/` (`schema`, `repository`) with `services/` that call the repository.
+- Call flow for local persistence: **service → repository → db**.
+- Screens, components, and hooks outside the owning feature must not query `db` directly — use that feature’s public API (e.g. `@features/user`).
+- The owning feature’s repository is the only layer that talks to the shared `db` client.
+- `users` table (owned by `@features/user`) caches the logged-in user and conversation participant profiles.
 
 # Secure storage
 

@@ -3,13 +3,16 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/core/context/AuthContext';
 import { DatabaseProvider } from '@core/db';
+import { UserProvider } from '@features/user';
 
 export function AppProviders({ children }: { children: ReactNode }) {
   return (
     <DatabaseProvider>
-      <SafeAreaProvider>
-        <AuthProvider>{children}</AuthProvider>
-      </SafeAreaProvider>
+      <UserProvider>
+        <SafeAreaProvider>
+          <AuthProvider>{children}</AuthProvider>
+        </SafeAreaProvider>
+      </UserProvider>
     </DatabaseProvider>
   );
 }

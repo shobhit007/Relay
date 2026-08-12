@@ -1,7 +1,6 @@
 /**
- * Shared Drizzle schema barrel.
- * Feature tables should be defined under this folder (or re-exported here)
- * so the app keeps a single migration stream.
+ * Schema aggregation for the shared Drizzle client / migrations.
+ * Feature tables are owned under features/<name>/db/schema and re-exported here.
  */
 
-export {};
+export { users } from '@features/user/db/schema';

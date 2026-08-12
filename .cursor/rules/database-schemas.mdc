@@ -12,7 +12,7 @@ The purpose of this document to define local database schemas and relationships 
                     │
        ┌────────────┼────────────┐
        │            │            │
-      user   conversations   messages
+      users   conversations   messages
                     │
                     │
                     ▼
@@ -24,10 +24,10 @@ The purpose of this document to define local database schemas and relationships 
 
 ---
 
-## user
+## users
 
-user {
-id
+users {
+id (unique primary key)
 username
 display_name
 avatar_url
@@ -39,7 +39,7 @@ updated_at
 ## conversations
 
 conversations {
-id
+id (unique primary key)
 type
 last_message_id
 last_message_preview
@@ -52,8 +52,8 @@ updated_at
 ## conversation participants
 
 conversation_participants {
-conversation_id
-user_id
+conversation_id (unique primary key)
+user_id (unique user key)
 unread_count
 last_read_message_id
 joined_at
@@ -62,6 +62,11 @@ joined_at
 ### Relationships
 
 `conversation_participants.conversation_id → conversations.id`
+`conversation_participants.user_id → users.id`
+
+### Constraints
+
+A user can not appear twice in a conversation.
 
 ---
 

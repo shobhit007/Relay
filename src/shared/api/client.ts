@@ -10,7 +10,7 @@ declare module "axios" {
   }
 }
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://192.168.1.6:8080";
+const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://192.168.1.16:8080";
 
 export const api = axios.create({
   baseURL: BASE_URL,
