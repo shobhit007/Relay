@@ -18,10 +18,11 @@ alwaysApply: true
   - `context/` — app-owned providers/hooks
   - `providers/` — `AppProviders` composition (SafeArea, Keyboard)
   - `db/` — shared SQLite client, migration provider, schema aggregation
+  - `env/` — typed public env (`@core/env`); read `EXPO_PUBLIC_*` from `.env` only through this module
   - `storage/secure-store/` — SecureStore infrastructure + public token-storage
   - `App.js` is entry + SDK bootstrap only;
 - **Theme:** colors, typography, spacing, radius, touch, layout only in [`src/theme/tokens.js`](src/theme/tokens.js) (`@app/theme/tokens`). Must stay in sync with `.cursor/rules/design.mdc`. Do not invent new tokens. Use `textStyle(variant)` for RN text styles (maps Inter weights to loaded font faces). Keep theme outside `src/app` so Expo Router does not register it as a route.
-- Features import from `@shared/*`, their own `@features/<name>/*`, `@app/theme/*`, `@/core/context/*`, `@core/db` (client only when inside that feature’s repository), and the public core storage surface `@/core/storage/secure-store` — never from root `@utils`, `@components`.
+- Features import from `@shared/*`, their own `@features/<name>/*`, `@app/theme/*`, `@/core/context/*`, `@core/env`, `@core/db` (client only when inside that feature’s repository), and the public core storage surface `@/core/storage/secure-store` — never from root `@utils`, `@components`.
 - Never import from another feature except through that feature’s public `index` exports.
 
 # Local database

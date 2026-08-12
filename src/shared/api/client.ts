@@ -1,5 +1,6 @@
 import axios, { type InternalAxiosRequestConfig } from "axios";
 
+import { env } from "@core/env";
 import { getAccessToken } from "@/core/storage/secure-store";
 
 import { normalizeApiError } from "./errors";
@@ -10,10 +11,8 @@ declare module "axios" {
   }
 }
 
-const BASE_URL = process.env.EXPO_PUBLIC_API_URL ?? "http://192.168.1.16:8080";
-
 export const api = axios.create({
-  baseURL: BASE_URL,
+  baseURL: env.apiUrl,
   timeout: 15_000,
   headers: {
     Accept: "application/json",

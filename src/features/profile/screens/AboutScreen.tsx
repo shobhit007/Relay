@@ -11,8 +11,6 @@ export function AboutScreen() {
   const { signOut } = useAuth();
   const user = useCurrentUser();
 
-  console.log("user", user);
-
   async function onSignOut() {
     await signOut();
     router.replace("/(auth)/welcome");
