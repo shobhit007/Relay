@@ -1,0 +1,80 @@
+Relay local database design system.
+
+# Purpose
+
+The purpose of this document to define local database schemas and relationships to support offline first architecture.
+
+---
+
+# High Level Architecture
+
+                 Local DB
+                    │
+       ┌────────────┼────────────┐
+       │            │            │
+      user   conversations   messages
+                    │
+                    │
+                    ▼
+                Server sync
+
+---
+
+# Schemas
+
+---
+
+## user
+
+user {
+id
+username
+display_name
+avatar_url
+updated_at
+}
+
+---
+
+## conversations
+
+conversations {
+id
+type
+last_message_id
+last_message_preview
+last_message_at
+updated_at
+}
+
+---
+
+## conversation participants
+
+conversation_participants {
+conversation_id
+user_id
+unread_count
+last_read_message_id
+joined_at
+}
+
+### Relationships
+
+`conversation_participants.conversation_id → conversations.id`
+
+---
+
+## messages
+
+messages {
+id
+conversation_id
+sender_id
+client_id
+content
+status
+created_at
+}
+
+---
