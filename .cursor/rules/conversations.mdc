@@ -1,0 +1,153 @@
+`Chats` screen is `conversations` feature. It just displays as `Chats`.
+
+# Purpose
+
+This document defines how Relay loads, renders, and synchronizes the user's conversation list in the Expo application.
+
+The primary goal is to provide an offline-first, local-first experience where conversations are displayed immediately from the local database and synchronized with the server in the background.
+
+---
+
+# High Level Architecture
+
+                   Chats
+                     │
+                     ▼
+                 Local DB
+                     │
+                     ▼
+             Render Chats
+                     │
+                     │
+                background
+                     │
+                     ▼
+                Sync Server
+                     │
+                     ▼
+            GET /conversations
+                     │
+                     ▼
+                latest data
+                     │
+                     ▼
+                Update Local DB
+                     │
+                     ▼
+               UI re-renders
+
+---
+
+# Local-First Rendering
+
+Local DB is the local source of truth for the currently rendered conversation data.
+
+When the user opens the Chats screen:
+
+Chats Screen
+↓
+Conversations Repository
+↓
+Local DB
+↓
+Conversations data
+↓
+Render UI
+
+If the device is offline, previously synchronized conversations should still be displayed.
+
+The user should not see a blocking:
+
+Loading conversations...
+
+when local conversation data is already available.
+
+---
+
+# Background Synchronization
+
+After the Chats screen has rendered local data, Relay synchronizes conversation data with the backend.
+
+Local DB Render
+↓
+Background Sync
+↓
+GET /conversations
+↓
+Server
+↓
+Conversations data
+↓
+Local DB
+
+The synchronization process should update:
+
+Conversations
+Conversation participants
+Users profile information
+Last message information
+Unread state
+Conversation timestamps
+
+The synchronization process must not block the initial rendering of the Chats screen.
+
+---
+
+# Chats UI Data
+
+A Chats list item should contain all information required to render a conversation without making another network request.
+
+Conceptually:
+
+type ChatListItem = {
+conversationId: string;
+
+user: {
+id: string;
+displayName: string;
+username: string;
+avatarUrl: string | null;
+};
+
+lastMessage: {
+id: string;
+preview: string;
+createdAt: string;
+} | null;
+
+unreadCount: number;
+};
+
+---
+
+# Chats UI
+
+For a direct conversation, the Chats screen should display:
+
+Chats
+
+[DP] user 1 10:42 AM
+last message 2 (unread count)
+
+[DP] user 2 Yesterday
+last message
+
+Each direct conversation row contains:
+
+User avatar
+User display name
+Last message preview
+Last message timestamp
+Unread count
+
+`User` means here conversation's other user from currently logged in user.
+
+---
+
+# Conversation Ordering
+
+The Chats screen should display conversations in descending order of the latest message.
+
+last_message_at DESC
+
+---
