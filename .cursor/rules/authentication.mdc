@@ -54,9 +54,32 @@ flowchart TD
   Signup -->|saveTokens + setUser| HomeStack
 ```
 
+---
+
+# Tokens lifecycle
+
+API request
+↓
+Add access token
+↓
+Server
+│
+├── 200 → return response
+│
+└── 401
+↓
+Refresh token (POST /auth/refresh)
+↓
+New access token
+↓
+Store tokens (if refresh token is also in respose)
+↓
+Retry original requests
+
 ## Notes
 
-- User profile is **in-memory only** (AuthContext). Cold start with tokens always revalidates via `/users/me`.
-- Tokens live in secure token-storage (`saveTokens` / `deleteTokens`).
-- Do not implement axios refresh-token retry until explicitly added.
-- Set `EXPO_PUBLIC_API_URL` for the API host (Android emulator often `http://10.0.2.2:8080`).
+- Multiple requests can expire simultaneously.
+- Use single-refresh mechanism. do not refresh for every single request.
+- Refresh once -> new token -> retry expired requests
+
+---

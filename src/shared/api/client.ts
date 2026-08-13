@@ -1,6 +1,17 @@
-import axios, { type InternalAxiosRequestConfig } from "axios";
+import axios, {
+  type AxiosError,
+  type AxiosResponse,
+  type InternalAxiosRequestConfig,
+} from "axios";
 
-import { getAccessToken } from "@/core/storage/secure-store";
+import { emitSessionExpired } from "@/core/session/session-bridge";
+import {
+  deleteTokens,
+  getAccessToken,
+  getRefreshToken,
+  saveAccessToken,
+  saveTokens,
+} from "@/core/storage/secure-store";
 import { env } from "@core/env";
 
 import { normalizeApiError } from "./errors";
@@ -8,8 +19,15 @@ import { normalizeApiError } from "./errors";
 declare module "axios" {
   export interface AxiosRequestConfig {
     skipAuth?: boolean;
+    _retry?: boolean;
   }
 }
+
+type QueuedRequest = {
+  config: InternalAxiosRequestConfig;
+  resolve: (value: AxiosResponse) => void;
+  reject: (reason?: unknown) => void;
+};
 
 export const api = axios.create({
   baseURL: env.apiUrl,
@@ -19,6 +37,65 @@ export const api = axios.create({
     "Content-Type": "application/json",
   },
 });
+
+let isRefreshing = false;
+const refreshQueue: QueuedRequest[] = [];
+
+async function persistRefreshedTokens(data: {
+  accessToken: string;
+  refreshToken?: string;
+}) {
+  if (data.refreshToken) {
+    await saveTokens({
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+    });
+    return;
+  }
+
+  await saveAccessToken(data.accessToken);
+}
+
+async function runSingleFlightRefresh() {
+  const refreshToken = await getRefreshToken();
+  if (!refreshToken) {
+    throw new Error("Missing refresh token");
+  }
+
+  const { data } = await api.post<{
+    accessToken: string;
+    refreshToken?: string;
+  }>("/auth/refresh", { refreshToken }, { skipAuth: true });
+
+  console.log("token refreshed", data);
+
+  await persistRefreshedTokens(data);
+}
+
+async function flushQueue(error: unknown | null) {
+  const pending = refreshQueue.splice(0, refreshQueue.length);
+
+  if (error) {
+    for (const item of pending) {
+      item.reject(error);
+    }
+    return;
+  }
+
+  for (const item of pending) {
+    try {
+      item.config._retry = true;
+      const accessToken = await getAccessToken();
+      if (accessToken) {
+        item.config.headers.Authorization = `Bearer ${accessToken}`;
+      }
+      const response = await api.request(item.config);
+      item.resolve(response);
+    } catch (retryError) {
+      item.reject(normalizeApiError(retryError));
+    }
+  }
+}
 
 api.interceptors.request.use(
   async (config: InternalAxiosRequestConfig) => {
@@ -38,7 +115,41 @@ api.interceptors.request.use(
 
 api.interceptors.response.use(
   (response) => response,
-  (error) => Promise.reject(normalizeApiError(error)),
+  async (error: AxiosError) => {
+    const config = error.config;
+
+    if (
+      !config ||
+      config.skipAuth ||
+      config._retry ||
+      error.response?.status !== 401
+    ) {
+      return Promise.reject(normalizeApiError(error));
+    }
+
+    return new Promise<AxiosResponse>((resolve, reject) => {
+      refreshQueue.push({ config, resolve, reject });
+
+      if (isRefreshing) {
+        return;
+      }
+
+      isRefreshing = true;
+
+      void runSingleFlightRefresh()
+        .then(async () => {
+          await flushQueue(null);
+        })
+        .catch(async (refreshError) => {
+          await deleteTokens();
+          emitSessionExpired();
+          await flushQueue(normalizeApiError(refreshError));
+        })
+        .finally(() => {
+          isRefreshing = false;
+        });
+    });
+  },
 );
 
 export default api;

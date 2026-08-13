@@ -1,5 +1,6 @@
 export {
   saveTokens,
+  saveAccessToken,
   getAccessToken,
   getRefreshToken,
   deleteTokens,

@@ -18,6 +18,10 @@ export async function saveTokens({
   ]);
 }
 
+export async function saveAccessToken(accessToken: string): Promise<void> {
+  await setItem(ACCESS_TOKEN_KEY, accessToken);
+}
+
 export async function getAccessToken(): Promise<string | null> {
   return getItem(ACCESS_TOKEN_KEY);
 }

@@ -29,3 +29,8 @@ export type RegisterInput = {
 export type MeResponse = {
   user: PublicUser;
 };
+
+export type RefreshSessionResponse = {
+  accessToken: string;
+  refreshToken?: string;
+};

@@ -3,6 +3,7 @@ import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/core/context/AuthContext';
 import { DatabaseProvider } from '@core/db';
+import { ToastProvider } from '@core/toast';
 import { UserProvider } from '@features/user';
 
 export function AppProviders({ children }: { children: ReactNode }) {
@@ -10,7 +11,9 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <DatabaseProvider>
       <UserProvider>
         <SafeAreaProvider>
-          <AuthProvider>{children}</AuthProvider>
+          <ToastProvider>
+            <AuthProvider>{children}</AuthProvider>
+          </ToastProvider>
         </SafeAreaProvider>
       </UserProvider>
     </DatabaseProvider>

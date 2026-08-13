@@ -8,12 +8,19 @@ import {
   type ReactNode,
 } from 'react';
 
+import { onSessionExpired } from '@/core/session/session-bridge';
 import {
   deleteTokens,
   getAccessToken,
   saveTokens,
 } from '@/core/storage/secure-store';
-import { getMe, login, register } from '@features/auth/api/auth.api';
+import { showToast } from '@core/toast';
+import {
+  getMe,
+  login,
+  logout as logoutRequest,
+  register,
+} from '@features/auth/api/auth.api';
 import type {
   LoginInput,
   PublicUser,
@@ -43,15 +50,35 @@ async function persistSessionUser(user: PublicUser) {
   });
 }
 
-async function applySession(user: PublicUser, accessToken: string, refreshToken: string) {
+async function applySession(
+  user: PublicUser,
+  accessToken: string,
+  refreshToken: string,
+) {
   await saveTokens({ accessToken, refreshToken });
   await persistSessionUser(user);
   return user;
 }
 
+async function clearLocalSession() {
+  await deleteTokens();
+  await userService.clearSession();
+}
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [status, setStatus] = useState<AuthStatus>('loading');
   const [user, setUser] = useState<PublicUser | null>(null);
+
+  useEffect(() => {
+    return onSessionExpired(() => {
+      void (async () => {
+        await clearLocalSession();
+        setUser(null);
+        setStatus('unauthenticated');
+        showToast('Session expired. Please log in again.');
+      })();
+    });
+  }, []);
 
   useEffect(() => {
     let cancelled = false;
@@ -74,8 +101,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           setStatus('authenticated');
         }
       } catch {
-        await deleteTokens();
-        await userService.clearSession();
+        await clearLocalSession();
         if (!cancelled) {
           setUser(null);
           setStatus('unauthenticated');
@@ -83,7 +109,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
     }
 
-    bootstrap();
+    void bootstrap();
 
     return () => {
       cancelled = true;
@@ -113,8 +139,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
-    await deleteTokens();
-    await userService.clearSession();
+    try {
+      await logoutRequest();
+    } catch {
+      // Best-effort server revoke; always clear local session.
+    }
+
+    await clearLocalSession();
     setUser(null);
     setStatus('unauthenticated');
   }, []);
