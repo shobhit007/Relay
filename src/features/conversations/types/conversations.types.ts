@@ -39,3 +39,14 @@ export type ChatListItem = {
   } | null;
   unreadCount: number;
 };
+
+export type ChatPeerUser = {
+  id: string;
+  username: string;
+  displayName: string;
+  avatarUrl: string | null;
+};
+
+export type ResolveChatResult =
+  | { mode: 'existing'; conversationId: string }
+  | { mode: 'temporary'; userId: string };

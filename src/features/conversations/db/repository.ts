@@ -53,6 +53,57 @@ export class ConversationRepository {
       });
   }
 
+  async findDirectConversationId(
+    currentUserId: string,
+    otherUserId: string,
+  ): Promise<string | null> {
+    const [row] = await db
+      .select({ id: conversations.id })
+      .from(conversations)
+      .innerJoin(
+        myParticipant,
+        and(
+          eq(myParticipant.conversationId, conversations.id),
+          eq(myParticipant.userId, currentUserId),
+        ),
+      )
+      .innerJoin(
+        otherParticipant,
+        and(
+          eq(otherParticipant.conversationId, conversations.id),
+          eq(otherParticipant.userId, otherUserId),
+        ),
+      )
+      .where(eq(conversations.type, 'DIRECT'))
+      .limit(1);
+
+    return row?.id ?? null;
+  }
+
+  async findOtherParticipantUser(
+    conversationId: string,
+    currentUserId: string,
+  ) {
+    const [row] = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+      })
+      .from(conversationParticipants)
+      .innerJoin(users, eq(users.id, conversationParticipants.userId))
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, conversationId),
+          ne(conversationParticipants.userId, currentUserId),
+        ),
+      )
+      .limit(1);
+
+    return row ?? null;
+  }
+
   async listChatItems(currentUserId: string): Promise<ChatListItem[]> {
     const rows = await db
       .select({

@@ -151,3 +151,46 @@ The Chats screen should display conversations in descending order of the latest 
 last_message_at DESC
 
 ---
+
+# Search
+
+Search users
+↓
+Select user
+↓
+Local DB
+↓
+Conversation?
+↓
+YES
+↓
+Open existing chat
+
+NO
+↓
+Open temporary chat
+
+---
+
+## Search result UI
+
+Each search result row should look like a conversation row, without last message, timestamp, or unread count.
+
+Each row contains:
+
+User avatar
+User display name
+Username
+
+---
+
+## Search select behavior
+
+On select:
+
+1. Upsert the selected peer into the local `users` table
+2. Look up a local DIRECT conversation that includes the current user and the selected peer
+3. If found → open chat with `conversationId`
+4. If missing → open a **temporary** chat with `userId`
+
+A temporary chat is not written to local `conversations` / `conversation_participants` and must not call `POST /conversations` on open alone. Persistence/create happens later when a message is sent (future flow).

@@ -4,7 +4,9 @@ import { fetchConversations } from '../api/conversations.api';
 import { conversationRepository } from '../db/repository';
 import type {
   ChatListItem,
+  ChatPeerUser,
   ConversationDto,
+  ResolveChatResult,
 } from '../types/conversations.types';
 
 function toIsoString(value: string | Date): string {
@@ -61,6 +63,58 @@ export class ConversationService {
 
   async listChatItems(currentUserId: string): Promise<ChatListItem[]> {
     return conversationRepository.listChatItems(currentUserId);
+  }
+
+  async resolveChatWithUser(
+    currentUserId: string,
+    peer: ChatPeerUser,
+  ): Promise<ResolveChatResult> {
+    await userService.upsertUser({
+      id: peer.id,
+      username: peer.username,
+      displayName: peer.displayName,
+      avatarUrl: peer.avatarUrl,
+      updatedAt: new Date().toISOString(),
+    });
+
+    const conversationId =
+      await conversationRepository.findDirectConversationId(
+        currentUserId,
+        peer.id,
+      );
+
+    if (conversationId) {
+      return { mode: 'existing', conversationId };
+    }
+
+    return { mode: 'temporary', userId: peer.id };
+  }
+
+  async getChatPeer(
+    currentUserId: string,
+    params: { conversationId?: string; userId?: string },
+  ): Promise<ChatPeerUser | null> {
+    if (params.conversationId) {
+      return conversationRepository.findOtherParticipantUser(
+        params.conversationId,
+        currentUserId,
+      );
+    }
+
+    if (params.userId) {
+      const user = await userService.getUserById(params.userId);
+      if (!user) {
+        return null;
+      }
+      return {
+        id: user.id,
+        username: user.username,
+        displayName: user.displayName,
+        avatarUrl: user.avatarUrl,
+      };
+    }
+
+    return null;
   }
 }
 

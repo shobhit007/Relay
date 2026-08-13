@@ -1,5 +1,6 @@
 import { Image } from "expo-image";
-import { FlatList, View } from "react-native";
+import { type Href, useRouter } from "expo-router";
+import { FlatList, Pressable, View } from "react-native";
 
 import { colors, radius, spacing } from "@app/theme/tokens";
 import { AppText, Screen } from "@shared/ui";
@@ -19,13 +20,21 @@ function initialsFor(name: string): string {
   return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
-function ChatRow({ item }: { item: ChatListItem }) {
+function ChatRow({
+  item,
+  onPress,
+}: {
+  item: ChatListItem;
+  onPress: (item: ChatListItem) => void;
+}) {
   const preview = item.lastMessage?.preview ?? "No messages yet";
   const time = formatChatTime(item.lastMessage?.createdAt);
   const avatarUrl = item.user.avatarUrl?.trim() || null;
 
   return (
-    <View
+    <Pressable
+      accessibilityRole="button"
+      onPress={() => onPress(item)}
       style={{
         flexDirection: "row",
         alignItems: "center",
@@ -112,12 +121,19 @@ function ChatRow({ item }: { item: ChatListItem }) {
           ) : null}
         </View>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
 export function ConversationsScreen() {
+  const router = useRouter();
   const chats = useChatList();
+
+  function onOpenChat(item: ChatListItem) {
+    router.push(
+      `/chat?conversationId=${encodeURIComponent(item.conversationId)}` as Href,
+    );
+  }
 
   return (
     <Screen scroll={false}>
@@ -154,7 +170,9 @@ export function ConversationsScreen() {
               </AppText>
             </View>
           }
-          renderItem={({ item }) => <ChatRow item={item} />}
+          renderItem={({ item }) => (
+            <ChatRow item={item} onPress={onOpenChat} />
+          )}
         />
       </View>
     </Screen>
