@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX `conversations_server_id_unique` ON `conversations` (`server_id`);

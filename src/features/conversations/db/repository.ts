@@ -16,6 +16,51 @@ const myParticipant = alias(conversationParticipants, 'my_participant');
 const otherParticipant = alias(conversationParticipants, 'other_participant');
 
 export class ConversationRepository {
+  async findByServerId(serverId: string) {
+    const [row] = await db
+      .select()
+      .from(conversations)
+      .where(eq(conversations.serverId, serverId))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async upsertSyncedConversation(input: {
+    serverId: string;
+    type: string;
+    updatedAt: string;
+  }): Promise<string> {
+    const existing = await this.findByServerId(input.serverId);
+
+    if (existing) {
+      await db
+        .update(conversations)
+        .set({
+          type: input.type,
+          updatedAt: input.updatedAt,
+          serverId: input.serverId,
+        })
+        .where(eq(conversations.id, existing.id));
+
+      return existing.id;
+    }
+
+    const localId = crypto.randomUUID();
+
+    await db.insert(conversations).values({
+      id: localId,
+      serverId: input.serverId,
+      type: input.type,
+      lastMessageId: null,
+      lastMessagePreview: null,
+      lastMessageAt: null,
+      updatedAt: input.updatedAt,
+    });
+
+    return localId;
+  }
+
   async upsertConversation(
     input: UpsertLocalConversationInput,
   ): Promise<void> {
@@ -25,6 +70,7 @@ export class ConversationRepository {
       .onConflictDoUpdate({
         target: conversations.id,
         set: {
+          serverId: input.serverId ?? null,
           type: input.type,
           lastMessageId: input.lastMessageId ?? null,
           lastMessagePreview: input.lastMessagePreview ?? null,

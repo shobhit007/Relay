@@ -7,4 +7,5 @@ export {
   conversationParticipants,
   conversations,
 } from '@features/conversations/db/schema';
+export { messages } from '@features/messages/db/schema';
 export { users } from '@features/user/db/schema';

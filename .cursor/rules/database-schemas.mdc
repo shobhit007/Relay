@@ -39,13 +39,19 @@ updated_at
 ## conversations
 
 conversations {
-id (unique primary key)
+id (unique local primary key)
+server_id (server generated UUID, nullable)
 type
 last_message_id
 last_message_preview
 last_message_at
 updated_at
 }
+
+## Constraints
+
+- `id` is unique local generated UUID.
+- `server_id` is nullable until server syncronization.
 
 ---
 
@@ -73,13 +79,29 @@ A user can not appear twice in a conversation.
 ## messages
 
 messages {
-id
-conversation_id
-sender_id
-client_id
+id (server generated UUID, nullable)
+client_id (client generated UUID, unique)
+conversation_id (conversation reference)
+sender_id (user reference)
 content
+content_type
 status
-created_at
+client_created_at
+server_created_at (nullable)
 }
+
+## Constraints
+
+- `client_id` is unique.
+- `conversation_id` references to `conversations.id`.
+- `sender_id` references to `users.id`.
+- `id` is the server-generated message ID and is nullable until server acknowledgment.
+
+## Local Status
+
+PENDING
+SENDING
+SENT
+FAILED
 
 ---

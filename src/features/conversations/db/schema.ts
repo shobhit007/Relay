@@ -1,13 +1,18 @@
-import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core';
+import { integer, primaryKey, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
-export const conversations = sqliteTable('conversations', {
-  id: text('id').primaryKey(),
-  type: text('type').notNull(),
-  lastMessageId: text('last_message_id'),
-  lastMessagePreview: text('last_message_preview'),
-  lastMessageAt: text('last_message_at'),
-  updatedAt: text('updated_at').notNull(),
-});
+export const conversations = sqliteTable(
+  'conversations',
+  {
+    id: text('id').primaryKey(),
+    serverId: text('server_id'),
+    type: text('type').notNull(),
+    lastMessageId: text('last_message_id'),
+    lastMessagePreview: text('last_message_preview'),
+    lastMessageAt: text('last_message_at'),
+    updatedAt: text('updated_at').notNull(),
+  },
+  (table) => [uniqueIndex('conversations_server_id_unique').on(table.serverId)],
+);
 
 export const conversationParticipants = sqliteTable(
   'conversation_participants',

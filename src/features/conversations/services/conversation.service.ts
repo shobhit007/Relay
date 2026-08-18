@@ -40,18 +40,15 @@ export class ConversationService {
     }
 
     for (const conversation of remote) {
-      await conversationRepository.upsertConversation({
-        id: conversation.id,
+      const localId = await conversationRepository.upsertSyncedConversation({
+        serverId: conversation.id,
         type: conversation.type,
-        lastMessageId: null,
-        lastMessagePreview: null,
-        lastMessageAt: null,
         updatedAt: toIsoString(conversation.updatedAt),
       });
 
       for (const participant of conversation.participants) {
         await conversationRepository.upsertParticipant({
-          conversationId: conversation.id,
+          conversationId: localId,
           userId: participant.userId,
           unreadCount: 0,
           lastReadMessageId: null,
