@@ -1,0 +1,51 @@
+# Purpose
+
+The purpose of this document is to define the flow of a message sending, receiving and syncronization.
+
+---
+
+## Send Flow
+
+Select user
+↓
+Local conversations?
+↓
+YES
+↓
+Open existing chat
+
+NO
+↓
+Temporary chat (user_id)
+
+Send message
+↓
+Create local conversation (local UUID)
+↓
+Create local message (local client UUID)
+↓
+PENDING
+↓
+message:send
+↓
+Server ack
+↓
+Server conversation id
+
+`conversation` mapping
+local id -> server id
+
+`message` mapping
+client id -> server id
+
+### Rules
+
+- Selecting a user never creates a local or server conversation.
+- Sending first message creates the local conversation.
+- The local conversation gets a temporary local ID.
+- Messages reference the local conversation ID.
+- The server resolves the real conversation.
+- `server_id` is stored against the local conversation.
+- Server communication uses `server_id` once available.
+- SQLite relationships continue using the local primary key.
+- The server ID is the canonical identity for server operations.

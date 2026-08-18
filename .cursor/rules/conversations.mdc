@@ -101,6 +101,7 @@ Conceptually:
 
 type ChatListItem = {
 conversationId: string;
+serverId: string;
 
 user: {
 id: string;
