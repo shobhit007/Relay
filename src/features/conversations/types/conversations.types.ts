@@ -49,4 +49,4 @@ export type ChatPeerUser = {
 
 export type ResolveChatResult =
   | { mode: 'existing'; conversationId: string }
-  | { mode: 'temporary'; userId: string };
+  | { mode: 'temporary'; recipientId: string };

@@ -1,31 +1,26 @@
-import { Image } from 'expo-image';
-import { type Href, useRouter } from 'expo-router';
-import { useEffect, useState } from 'react';
-import {
-  ActivityIndicator,
-  FlatList,
-  Pressable,
-  View,
-} from 'react-native';
+import { Image } from "expo-image";
+import { type Href, useRouter } from "expo-router";
+import { useEffect, useState } from "react";
+import { ActivityIndicator, FlatList, Pressable, View } from "react-native";
 
-import { conversationService } from '@features/conversations';
-import { useUser } from '@features/user';
-import { colors, radius, spacing } from '@app/theme/tokens';
-import { ApiError } from '@shared/api';
-import { AppText, Screen, TextField } from '@shared/ui';
+import { colors, radius, spacing } from "@app/theme/tokens";
+import { conversationService } from "@features/conversations";
+import { useUser } from "@features/user";
+import { ApiError } from "@shared/api";
+import { AppText, Screen, TextField } from "@shared/ui";
 
-import { searchUsers } from '../api/search.api';
-import type { SearchUser } from '../types/search.types';
+import { searchUsers } from "../api/search.api";
+import type { SearchUser } from "../types/search.types";
 
 function initialsFor(name: string): string {
   const parts = name.trim().split(/\s+/).filter(Boolean);
   if (parts.length === 0) {
-    return '?';
+    return "?";
   }
   if (parts.length === 1) {
     return parts[0].slice(0, 2).toUpperCase();
   }
-  return `${parts[0][0] ?? ''}${parts[1][0] ?? ''}`.toUpperCase();
+  return `${parts[0][0] ?? ""}${parts[1][0] ?? ""}`.toUpperCase();
 }
 
 function SearchUserRow({
@@ -42,8 +37,8 @@ function SearchUserRow({
       accessibilityRole="button"
       onPress={() => onPress(item)}
       style={{
-        flexDirection: 'row',
-        alignItems: 'center',
+        flexDirection: "row",
+        alignItems: "center",
         gap: spacing.stackSm,
         paddingVertical: spacing.stackSm,
       }}
@@ -56,22 +51,20 @@ function SearchUserRow({
           backgroundColor: colors.surface,
           borderWidth: 1,
           borderColor: colors.border,
-          alignItems: 'center',
-          justifyContent: 'center',
-          overflow: 'hidden',
+          alignItems: "center",
+          justifyContent: "center",
+          overflow: "hidden",
         }}
       >
         {avatarUrl ? (
           <Image
             source={{ uri: avatarUrl }}
-            style={{ width: '100%', height: '100%' }}
+            style={{ width: "100%", height: "100%" }}
             contentFit="cover"
             recyclingKey={item.id}
           />
         ) : (
-          <AppText variant="label-lg">
-            {initialsFor(item.displayName)}
-          </AppText>
+          <AppText variant="label-lg">{initialsFor(item.displayName)}</AppText>
         )}
       </View>
 
@@ -79,7 +72,11 @@ function SearchUserRow({
         <AppText variant="headline-sm" numberOfLines={1}>
           {item.displayName}
         </AppText>
-        <AppText variant="body-md" color={colors.secondaryText} numberOfLines={1}>
+        <AppText
+          variant="body-md"
+          color={colors.secondaryText}
+          numberOfLines={1}
+        >
           @{item.username}
         </AppText>
       </View>
@@ -90,7 +87,7 @@ function SearchUserRow({
 export function SearchScreen() {
   const router = useRouter();
   const { currentUserId } = useUser();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [results, setResults] = useState<SearchUser[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -120,7 +117,7 @@ export function SearchScreen() {
         const message =
           err instanceof ApiError
             ? err.message
-            : 'Unable to search users. Please try again.';
+            : "Unable to search users. Please try again.";
         setError(message);
         setResults([]);
       } finally {
@@ -155,20 +152,20 @@ export function SearchScreen() {
         },
       );
 
-      if (result.mode === 'existing') {
+      if (result.mode === "existing") {
         router.push(
           `/chat?conversationId=${encodeURIComponent(result.conversationId)}` as Href,
         );
       } else {
         router.push(
-          `/chat?userId=${encodeURIComponent(result.userId)}` as Href,
+          `/chat?recipientId=${encodeURIComponent(result.recipientId)}` as Href,
         );
       }
     } catch (err) {
       const message =
         err instanceof ApiError
           ? err.message
-          : 'Unable to open chat. Please try again.';
+          : "Unable to open chat. Please try again.";
       setError(message);
     } finally {
       setOpeningUserId(null);
@@ -178,6 +175,7 @@ export function SearchScreen() {
   return (
     <Screen scroll={false}>
       <View style={{ flex: 1, gap: spacing.stackMd }}>
+        <AppText variant="headline">Search</AppText>
         <TextField
           label="Username"
           displayLabel={false}
@@ -199,8 +197,8 @@ export function SearchScreen() {
           <View
             style={{
               flex: 1,
-              alignItems: 'center',
-              justifyContent: 'center',
+              alignItems: "center",
+              justifyContent: "center",
             }}
           >
             <ActivityIndicator color={colors.primaryText} />
@@ -220,8 +218,8 @@ export function SearchScreen() {
                 <View
                   style={{
                     flex: 1,
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    alignItems: "center",
+                    justifyContent: "center",
                     gap: spacing.stackSm,
                     paddingTop: spacing.stackLg,
                   }}
@@ -241,8 +239,8 @@ export function SearchScreen() {
                 <View
                   style={{
                     flex: 1,
-                    alignItems: 'center',
-                    justifyContent: 'center',
+                    alignItems: "center",
+                    justifyContent: "center",
                     gap: spacing.stackSm,
                     paddingTop: spacing.stackLg,
                   }}

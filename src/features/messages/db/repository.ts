@@ -1,4 +1,4 @@
-import { eq } from 'drizzle-orm';
+import { asc, eq } from 'drizzle-orm';
 
 import { db } from '@/core/db/client';
 import type { DbExecutor } from '@/core/db/types';
@@ -40,6 +40,46 @@ export class MessageRepository {
           serverCreatedAt: input.serverCreatedAt ?? null,
         },
       });
+  }
+
+  async insertPending(
+    input: UpsertLocalMessageInput,
+    executor: DbExecutor = db,
+  ): Promise<void> {
+    await executor.insert(messages).values(input);
+  }
+
+  async markSent(
+    input: {
+      clientId: string;
+      id: string;
+      serverCreatedAt: string;
+    },
+    executor: DbExecutor = db,
+  ): Promise<void> {
+    await executor
+      .update(messages)
+      .set({
+        id: input.id,
+        status: MESSAGE_STATUS.SENT,
+        serverCreatedAt: input.serverCreatedAt,
+      })
+      .where(eq(messages.clientId, input.clientId));
+  }
+
+  async markFailed(clientId: string, executor: DbExecutor = db): Promise<void> {
+    await executor
+      .update(messages)
+      .set({ status: MESSAGE_STATUS.FAILED })
+      .where(eq(messages.clientId, clientId));
+  }
+
+  messagesQuery(conversationId: string) {
+    return db
+      .select()
+      .from(messages)
+      .where(eq(messages.conversationId, conversationId))
+      .orderBy(asc(messages.clientCreatedAt));
   }
 }
 

@@ -102,12 +102,47 @@ export class ConversationService {
       return { mode: 'existing', conversationId };
     }
 
-    return { mode: 'temporary', userId: peer.id };
+    return { mode: 'temporary', recipientId: peer.id };
+  }
+
+  async ensureLocalDirectConversation(
+    currentUserId: string,
+    recipientId: string,
+  ): Promise<{ id: string; serverId: string | null }> {
+    return conversationRepository.ensureLocalDirectConversation(
+      currentUserId,
+      recipientId,
+    );
+  }
+
+  async setServerId(
+    localId: string,
+    serverId: string,
+    executor?: DbExecutor,
+  ): Promise<void> {
+    await conversationRepository.setServerId(localId, serverId, executor);
+  }
+
+  async findById(id: string, executor?: DbExecutor) {
+    return conversationRepository.findById(id, executor);
+  }
+
+  async updateLastMessage(
+    input: {
+      conversationId: string;
+      lastMessageId: string;
+      lastMessagePreview: string;
+      lastMessageAt: string;
+      updatedAt: string;
+    },
+    executor?: DbExecutor,
+  ): Promise<void> {
+    await conversationRepository.updateLastMessage(input, executor);
   }
 
   async getChatPeer(
     currentUserId: string,
-    params: { conversationId?: string; userId?: string },
+    params: { conversationId?: string; recipientId?: string },
   ): Promise<ChatPeerUser | null> {
     if (params.conversationId) {
       return conversationRepository.findOtherParticipantUser(
@@ -116,8 +151,8 @@ export class ConversationService {
       );
     }
 
-    if (params.userId) {
-      const user = await userService.getUserById(params.userId);
+    if (params.recipientId) {
+      const user = await userService.getUserById(params.recipientId);
       if (!user) {
         return null;
       }

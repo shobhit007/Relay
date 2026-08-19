@@ -33,7 +33,7 @@ export type MessageSendPayload = {
   content: string;
   contentType: string;
   conversationId?: string;
-  userId?: string;
+  recipientId?: string;
 };
 
 export type ServerToClientEvents = {

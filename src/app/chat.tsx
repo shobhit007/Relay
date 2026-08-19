@@ -1,1 +1,1 @@
-export { ChatScreen as default } from '@features/conversations';
+export { ChatScreen as default } from '@features/messages';

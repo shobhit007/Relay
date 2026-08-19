@@ -208,6 +208,76 @@ export class ConversationRepository {
     return row?.id ?? null;
   }
 
+  async findById(id: string, executor: DbExecutor = db) {
+    const [row] = await executor
+      .select()
+      .from(conversations)
+      .where(eq(conversations.id, id))
+      .limit(1);
+
+    return row ?? null;
+  }
+
+  async ensureLocalDirectConversation(
+    currentUserId: string,
+    recipientId: string,
+  ): Promise<{ id: string; serverId: string | null }> {
+    const existingId = await this.findDirectConversationId(
+      currentUserId,
+      recipientId,
+    );
+
+    if (existingId) {
+      const existing = await this.findById(existingId);
+      return {
+        id: existingId,
+        serverId: existing?.serverId ?? null,
+      };
+    }
+
+    const localId = createLocalId();
+    const now = new Date().toISOString();
+
+    await db.insert(conversations).values({
+      id: localId,
+      serverId: null,
+      type: 'DIRECT',
+      lastMessageId: null,
+      lastMessagePreview: null,
+      lastMessageAt: null,
+      updatedAt: now,
+    });
+
+    await this.upsertParticipant({
+      conversationId: localId,
+      userId: currentUserId,
+      unreadCount: 0,
+      lastReadMessageId: null,
+      joinedAt: now,
+    });
+
+    await this.upsertParticipant({
+      conversationId: localId,
+      userId: recipientId,
+      unreadCount: 0,
+      lastReadMessageId: null,
+      joinedAt: now,
+    });
+
+    return { id: localId, serverId: null };
+  }
+
+  async setServerId(
+    localId: string,
+    serverId: string,
+    executor: DbExecutor = db,
+  ): Promise<void> {
+    await executor
+      .update(conversations)
+      .set({ serverId })
+      .where(eq(conversations.id, localId));
+  }
+
   async findOtherParticipantUser(
     conversationId: string,
     currentUserId: string,

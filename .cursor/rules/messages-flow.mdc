@@ -6,31 +6,33 @@ The purpose of this document is to define the flow of a message sending, receivi
 
 ## Send Flow
 
-Select user
+Send message
 ↓
-Local conversations?
-↓
+Conversation exists (locally)?
+
 YES
 ↓
-Open existing chat
+server_id
 
 NO
 ↓
-Temporary chat (user_id)
-
-Send message
+Create local conversation
 ↓
-Create local conversation (local UUID)
+Create participants
 ↓
-Create local message (local client UUID)
+Create local message
+↓
+Display immediately (optimistic UI)
 ↓
 PENDING
 ↓
-message:send
+message:send (server_id/recepientId)
 ↓
 Server ack
 ↓
-Server conversation id
+Reconciliation conversation, message
+↓
+SENT
 
 `conversation` mapping
 local id -> server id
@@ -41,9 +43,10 @@ client id -> server id
 ### Rules
 
 - Selecting a user never creates a local or server conversation.
-- Sending first message creates the local conversation.
+- Sending first message creates the local conversation (if doesn't exist).
 - The local conversation gets a temporary local ID.
 - Messages reference the local conversation ID.
+- Send message payload contains `server_id` if available or `recepientId` as other `users.id`.
 - The server resolves the real conversation.
 - `server_id` is stored against the local conversation.
 - Server communication uses `server_id` once available.
