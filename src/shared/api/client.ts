@@ -5,6 +5,7 @@ import axios, {
 } from "axios";
 
 import { emitSessionExpired } from "@/core/session/session-bridge";
+import { emitAccessTokenRefreshed } from "@/core/session/token-bridge";
 import {
   deleteTokens,
   getAccessToken,
@@ -50,10 +51,11 @@ async function persistRefreshedTokens(data: {
       accessToken: data.accessToken,
       refreshToken: data.refreshToken,
     });
-    return;
+  } else {
+    await saveAccessToken(data.accessToken);
   }
 
-  await saveAccessToken(data.accessToken);
+  emitAccessTokenRefreshed(data.accessToken);
 }
 
 async function runSingleFlightRefresh() {

@@ -2,7 +2,9 @@ import { and, desc, eq, ne, sql } from 'drizzle-orm';
 import { alias } from 'drizzle-orm/sqlite-core';
 
 import { db } from '@/core/db/client';
+import type { DbExecutor } from '@/core/db/types';
 import { users } from '@features/user';
+import { createLocalId } from '@shared/utils/id';
 
 import type { ChatListItem } from '../types/conversations.types';
 import {
@@ -16,14 +18,94 @@ const myParticipant = alias(conversationParticipants, 'my_participant');
 const otherParticipant = alias(conversationParticipants, 'other_participant');
 
 export class ConversationRepository {
-  async findByServerId(serverId: string) {
-    const [row] = await db
+  async findByServerId(serverId: string, executor: DbExecutor = db) {
+    const [row] = await executor
       .select()
       .from(conversations)
       .where(eq(conversations.serverId, serverId))
       .limit(1);
 
     return row ?? null;
+  }
+
+  async updateLastMessage(
+    input: {
+      conversationId: string;
+      lastMessageId: string;
+      lastMessagePreview: string;
+      lastMessageAt: string;
+      updatedAt: string;
+    },
+    executor: DbExecutor = db,
+  ): Promise<void> {
+    await executor
+      .update(conversations)
+      .set({
+        lastMessageId: input.lastMessageId,
+        lastMessagePreview: input.lastMessagePreview,
+        lastMessageAt: input.lastMessageAt,
+        updatedAt: input.updatedAt,
+      })
+      .where(eq(conversations.id, input.conversationId));
+  }
+
+  async incrementUnread(
+    conversationId: string,
+    userId: string,
+    executor: DbExecutor = db,
+  ): Promise<void> {
+    await executor
+      .update(conversationParticipants)
+      .set({
+        unreadCount: sql`${conversationParticipants.unreadCount} + 1`,
+      })
+      .where(
+        and(
+          eq(conversationParticipants.conversationId, conversationId),
+          eq(conversationParticipants.userId, userId),
+        ),
+      );
+  }
+
+  async applyIncomingMessageSideEffects(
+    input: {
+      serverConversationId: string;
+      messageId: string;
+      preview: string;
+      messageAt: string;
+      currentUserId: string;
+      senderId: string;
+    },
+    executor: DbExecutor = db,
+  ): Promise<string | null> {
+    const conversation = await this.findByServerId(
+      input.serverConversationId,
+      executor,
+    );
+    if (!conversation) {
+      return null;
+    }
+
+    await this.updateLastMessage(
+      {
+        conversationId: conversation.id,
+        lastMessageId: input.messageId,
+        lastMessagePreview: input.preview,
+        lastMessageAt: input.messageAt,
+        updatedAt: input.messageAt,
+      },
+      executor,
+    );
+
+    if (input.senderId !== input.currentUserId) {
+      await this.incrementUnread(
+        conversation.id,
+        input.currentUserId,
+        executor,
+      );
+    }
+
+    return conversation.id;
   }
 
   async upsertSyncedConversation(input: {
@@ -46,7 +128,7 @@ export class ConversationRepository {
       return existing.id;
     }
 
-    const localId = crypto.randomUUID();
+    const localId = createLocalId();
 
     await db.insert(conversations).values({
       id: localId,

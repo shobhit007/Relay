@@ -1,3 +1,4 @@
+import type { DbExecutor } from '@/core/db/types';
 import { userService } from '@features/user';
 
 import { fetchConversations } from '../api/conversations.api';
@@ -56,6 +57,23 @@ export class ConversationService {
         });
       }
     }
+  }
+
+  async applyIncomingMessageSideEffects(
+    input: {
+      serverConversationId: string;
+      messageId: string;
+      preview: string;
+      messageAt: string;
+      currentUserId: string;
+      senderId: string;
+    },
+    executor?: DbExecutor,
+  ): Promise<string | null> {
+    return conversationRepository.applyIncomingMessageSideEffects(
+      input,
+      executor,
+    );
   }
 
   async listChatItems(currentUserId: string): Promise<ChatListItem[]> {
