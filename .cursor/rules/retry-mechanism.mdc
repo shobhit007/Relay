@@ -1,0 +1,33 @@
+This document tells about socket reconnection and messages retry strategies of Relay.
+
+---
+
+# Socket.io Reconnection flow
+
+Socket Connected
+↓
+network drops/server unavailable
+↓
+Socket disconnected
+↓
+Socket.IO attempts reconnection
+↓
+Current access token
+↓
+Access token expired?
+↓
+Refresh and store access token
+↓
+connected again
+↓
+message synchronization + start message retry
+
+## Socket.io Configuration
+
+reconnection: true
+reconnectionAttempts: 5
+reconnectionDelay: 1000ms
+reconnectionDelayMax: 10000ms
+randomizationFactor: default
+
+- do not retry socket.io reconnection if network is not available.
