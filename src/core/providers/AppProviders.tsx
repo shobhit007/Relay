@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
 import { AuthProvider } from '@/core/context/AuthContext';
@@ -12,11 +13,13 @@ export function AppProviders({ children }: { children: ReactNode }) {
     <DatabaseProvider>
       <UserProvider>
         <SafeAreaProvider>
-          <ToastProvider>
-            <AuthProvider>
-              <SocketProvider>{children}</SocketProvider>
-            </AuthProvider>
-          </ToastProvider>
+          <KeyboardProvider>
+            <ToastProvider>
+              <AuthProvider>
+                <SocketProvider>{children}</SocketProvider>
+              </AuthProvider>
+            </ToastProvider>
+          </KeyboardProvider>
         </SafeAreaProvider>
       </UserProvider>
     </DatabaseProvider>

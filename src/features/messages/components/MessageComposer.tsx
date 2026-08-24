@@ -1,14 +1,16 @@
-import { useState } from 'react';
+import { useRef, useState } from "react";
 import {
   ActivityIndicator,
   Pressable,
   TextInput,
   View,
-} from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+  type TextInput as TextInputType,
+} from "react-native";
+import { useKeyboardState } from "react-native-keyboard-controller";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { colors, radius, spacing, textStyle, touch } from '@app/theme/tokens';
-import { AppText } from '@shared/ui';
+import { colors, radius, spacing, textStyle, touch } from "@app/theme/tokens";
+import { Icon } from "@shared/ui";
 
 type MessageComposerProps = {
   disabled?: boolean;
@@ -22,7 +24,9 @@ export function MessageComposer({
   onSend,
 }: MessageComposerProps) {
   const insets = useSafeAreaInsets();
-  const [text, setText] = useState('');
+  const isKeyboardVisible = useKeyboardState((state) => state.isVisible);
+  const inputRef = useRef<TextInputType>(null);
+  const [text, setText] = useState("");
 
   async function handleSend() {
     const content = text.trim();
@@ -30,32 +34,40 @@ export function MessageComposer({
       return;
     }
 
-    setText('');
+    setText("");
+    // Keep focus through send so the keyboard stays open.
+    inputRef.current?.focus();
     await onSend(content);
+    requestAnimationFrame(() => {
+      inputRef.current?.focus();
+    });
   }
 
   const canSend = text.trim().length > 0 && !disabled && !sending;
+  const bottomPadding = isKeyboardVisible
+    ? spacing.stackMd
+    : Math.max(insets.bottom, spacing.stackSm) + spacing.stackSm;
 
   return (
     <View
       style={{
-        flexDirection: 'row',
-        alignItems: 'flex-end',
+        flexDirection: "row",
+        alignItems: "flex-end",
         gap: spacing.stackSm,
         paddingHorizontal: spacing.containerPaddingMobile,
         paddingTop: spacing.stackSm,
-        paddingBottom: Math.max(insets.bottom, spacing.stackSm),
-        borderTopWidth: 1,
-        borderTopColor: colors.border,
-        backgroundColor: colors.secondaryBackground,
+        paddingBottom: bottomPadding,
+        backgroundColor: colors.primaryBackground,
       }}
     >
       <TextInput
+        ref={inputRef}
         value={text}
         onChangeText={setText}
         placeholder="Message"
         placeholderTextColor={colors.placeholder}
-        editable={!disabled && !sending}
+        editable={!disabled}
+        blurOnSubmit={false}
         multiline
         style={{
           flex: 1,
@@ -68,36 +80,35 @@ export function MessageComposer({
           borderColor: colors.border,
           backgroundColor: colors.surface,
           color: colors.primaryText,
-          ...textStyle('body-md'),
+          ...textStyle("body-md"),
         }}
       />
       <Pressable
         accessibilityRole="button"
         accessibilityLabel="Send message"
         disabled={!canSend}
+        hitSlop={8}
         onPress={() => {
           void handleSend();
         }}
         style={{
-          minWidth: touch.button,
-          minHeight: touch.button,
-          borderRadius: radius.buttons,
-          alignItems: 'center',
-          justifyContent: 'center',
-          paddingHorizontal: spacing.stackSm,
-          backgroundColor: canSend ? colors.accent : colors.surface,
-          opacity: canSend ? 1 : 0.5,
+          minWidth: touch.min,
+          minHeight: touch.min,
+          alignItems: "center",
+          justifyContent: "center",
+          marginBottom: 4,
+          opacity: canSend ? 1 : 0.4,
         }}
       >
         {sending ? (
-          <ActivityIndicator color={colors.primaryText} />
+          <ActivityIndicator color={colors.accent} />
         ) : (
-          <AppText
-            variant="label-lg"
-            color={canSend ? colors.primaryText : colors.secondaryText}
-          >
-            Send
-          </AppText>
+          <Icon
+            name="SendHorizontal"
+            size={24}
+            color={canSend ? colors.accent : colors.secondaryText}
+            fill={canSend ? colors.accent : colors.secondaryText}
+          />
         )}
       </Pressable>
     </View>
