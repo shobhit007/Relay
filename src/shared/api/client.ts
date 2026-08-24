@@ -69,8 +69,6 @@ async function runSingleFlightRefresh() {
     refreshToken?: string;
   }>("/auth/refresh", { refreshToken }, { skipAuth: true });
 
-  console.log("token refreshed", data);
-
   await persistRefreshedTokens(data);
 }
 
