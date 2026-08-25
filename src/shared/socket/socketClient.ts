@@ -16,6 +16,10 @@ export function getSocketClient(): AppSocket {
     socket = io(env.apiUrl, {
       autoConnect: false,
       transports: ['websocket'],
+      reconnection: true,
+      reconnectionAttempts: 5,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 10_000,
     }) as AppSocket;
   }
 

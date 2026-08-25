@@ -58,7 +58,10 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    socketManager.startNetworkGate();
+
     return () => {
+      socketManager.stopNetworkGate();
       socketManager.disconnect();
     };
   }, []);

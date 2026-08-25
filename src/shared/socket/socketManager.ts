@@ -1,21 +1,24 @@
+import { networkManager } from "@/core/network";
+import { ensureValidAccessToken } from "@shared/api";
+
 import {
   getSocketClient,
   resetSocketClient,
   type AppSocket,
-} from './socketClient';
-import type { SocketEventName } from './socketEvents';
+} from "./socketClient";
+import type { SocketEventName } from "./socketEvents";
 
 export type SocketConnectionState =
-  | 'disconnected'
-  | 'connecting'
-  | 'connected'
-  | 'reconnecting'
-  | 'error';
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "reconnecting"
+  | "error";
 
 type ConnectionStateListener = (state: SocketConnectionState) => void;
 
 class SocketManager {
-  private state: SocketConnectionState = 'disconnected';
+  private state: SocketConnectionState = "disconnected";
   private readonly stateListeners = new Set<ConnectionStateListener>();
   private readonly featureHandlers = new Map<
     string,
@@ -23,6 +26,10 @@ class SocketManager {
   >();
   private lifecycleBound = false;
   private intentionalDisconnect = false;
+  private accessToken: string | null = null;
+  private unsubscribeNetwork: (() => void) | null = null;
+  private refreshingAuth = false;
+  private authRetryUsed = false;
 
   getConnectionState(): SocketConnectionState {
     return this.state;
@@ -36,36 +43,86 @@ class SocketManager {
     };
   }
 
+  startNetworkGate(): void {
+    if (this.unsubscribeNetwork) {
+      return;
+    }
+
+    const applyNetworkState = (
+      network: ReturnType<typeof networkManager.getState>,
+    ) => {
+      const socket = getSocketClient();
+
+      if (network.status === "offline") {
+        socket.io.reconnection(false);
+        return;
+      }
+
+      if (network.status !== "online") {
+        return;
+      }
+
+      socket.io.reconnection(true);
+
+      if (this.intentionalDisconnect || !this.accessToken || socket.connected) {
+        return;
+      }
+
+      this.applyAuth(socket, this.accessToken);
+      this.bindLifecycle(socket);
+      this.rebindFeatureHandlers(socket);
+      this.setState("reconnecting");
+      socket.connect();
+    };
+
+    this.unsubscribeNetwork = networkManager.subscribe(applyNetworkState);
+    applyNetworkState(networkManager.getState());
+  }
+
+  stopNetworkGate(): void {
+    this.unsubscribeNetwork?.();
+    this.unsubscribeNetwork = null;
+  }
+
   connect(token: string): void {
+    console.log("socket connecting...");
     const socket = getSocketClient();
     this.intentionalDisconnect = false;
-    socket.auth = { token };
+    this.accessToken = token;
+    this.applyAuth(socket, token);
+    this.syncReconnectionEnabled(socket);
 
     this.bindLifecycle(socket);
     this.rebindFeatureHandlers(socket);
 
     if (socket.connected) {
-      this.setState('connected');
+      this.setState("connected");
       return;
     }
 
-    this.setState('connecting');
+    this.setState("connecting");
     socket.connect();
   }
 
   disconnect(): void {
     this.intentionalDisconnect = true;
+    this.accessToken = null;
+    this.refreshingAuth = false;
     const socket = getSocketClient();
+    socket.io.reconnection(false);
     this.unbindLifecycle(socket);
     this.clearSocketFeatureListeners(socket);
     socket.disconnect();
-    this.setState('disconnected');
+    this.setState("disconnected");
   }
 
   reconnectWithToken(token: string): void {
+    console.log("reconnecting with token");
     const socket = getSocketClient();
     this.intentionalDisconnect = false;
-    socket.auth = { token };
+    this.accessToken = token;
+    this.applyAuth(socket, token);
+    this.syncReconnectionEnabled(socket);
 
     this.bindLifecycle(socket);
     this.rebindFeatureHandlers(socket);
@@ -74,7 +131,7 @@ class SocketManager {
       socket.disconnect();
     }
 
-    this.setState('reconnecting');
+    this.setState("reconnecting");
     socket.connect();
   }
 
@@ -119,11 +176,23 @@ class SocketManager {
   }
 
   destroy(): void {
+    this.stopNetworkGate();
     this.disconnect();
     this.featureHandlers.clear();
     this.stateListeners.clear();
     resetSocketClient();
     this.lifecycleBound = false;
+  }
+
+  private applyAuth(socket: AppSocket, token: string) {
+    socket.auth = { token };
+  }
+
+  private syncReconnectionEnabled(socket: AppSocket) {
+    const shouldReconnect =
+      !this.intentionalDisconnect &&
+      networkManager.getState().status !== "offline";
+    socket.io.reconnection(shouldReconnect);
   }
 
   private setState(next: SocketConnectionState) {
@@ -141,13 +210,16 @@ class SocketManager {
       return;
     }
 
-    socket.on('connect', this.handleConnect);
-    socket.on('disconnect', this.handleDisconnect);
-    socket.on('connect_error', this.handleConnectError);
-    socket.io.on('reconnect_attempt', this.handleReconnectAttempt);
-    socket.io.on('reconnect', this.handleReconnect);
+    socket.on("connect", this.handleConnect);
+    socket.on("disconnect", this.handleDisconnect);
+    socket.on("connect_error", this.handleConnectError);
+    socket.io.on("reconnect_attempt", this.handleReconnectAttempt);
+    socket.io.on("reconnect", this.handleReconnect);
+    socket.io.on("reconnect_failed", this.handleReconnectFailed);
 
     this.lifecycleBound = true;
+
+    console.log("life cycle bounded");
   }
 
   private unbindLifecycle(socket: AppSocket) {
@@ -155,11 +227,12 @@ class SocketManager {
       return;
     }
 
-    socket.off('connect', this.handleConnect);
-    socket.off('disconnect', this.handleDisconnect);
-    socket.off('connect_error', this.handleConnectError);
-    socket.io.off('reconnect_attempt', this.handleReconnectAttempt);
-    socket.io.off('reconnect', this.handleReconnect);
+    socket.off("connect", this.handleConnect);
+    socket.off("disconnect", this.handleDisconnect);
+    socket.off("connect_error", this.handleConnectError);
+    socket.io.off("reconnect_attempt", this.handleReconnectAttempt);
+    socket.io.off("reconnect", this.handleReconnect);
+    socket.io.off("reconnect_failed", this.handleReconnectFailed);
 
     this.lifecycleBound = false;
   }
@@ -197,28 +270,117 @@ class SocketManager {
     socket.off(event as never, handler as never);
   }
 
+  private refreshAuthCache(): void {
+    void ensureValidAccessToken().then((token) => {
+      if (this.intentionalDisconnect) {
+        return;
+      }
+
+      if (!token) {
+        this.disconnect();
+        return;
+      }
+
+      this.accessToken = token;
+      this.applyAuth(getSocketClient(), token);
+    });
+  }
+
   private readonly handleConnect = () => {
-    this.setState('connected');
+    this.refreshingAuth = false;
+    this.authRetryUsed = false;
+    this.setState("connected");
   };
 
   private readonly handleDisconnect = () => {
     if (this.intentionalDisconnect) {
-      this.setState('disconnected');
+      this.setState("disconnected");
       return;
     }
-    this.setState('reconnecting');
+
+    this.setState("reconnecting");
+
+    if (networkManager.getState().status === "offline") {
+      getSocketClient().io.reconnection(false);
+      return;
+    }
+
+    this.refreshAuthCache();
   };
 
-  private readonly handleConnectError = () => {
-    this.setState('error');
+  private readonly handleConnectError = (error: Error) => {
+    if (this.intentionalDisconnect) {
+      return;
+    }
+
+    if (error.message === "UNAUTHORIZED") {
+      if (this.refreshingAuth) {
+        return;
+      }
+
+      if (this.authRetryUsed) {
+        this.disconnect();
+        return;
+      }
+
+      this.authRetryUsed = true;
+      this.refreshingAuth = true;
+      this.setState("reconnecting");
+
+      void ensureValidAccessToken()
+        .then((token) => {
+          if (this.intentionalDisconnect) {
+            return;
+          }
+
+          if (!token) {
+            this.disconnect();
+            return;
+          }
+
+          const socket = getSocketClient();
+          this.accessToken = token;
+          this.applyAuth(socket, token);
+          this.syncReconnectionEnabled(socket);
+
+          if (!socket.connected) {
+            socket.connect();
+          }
+        })
+        .finally(() => {
+          this.refreshingAuth = false;
+        });
+      return;
+    }
+
+    if (networkManager.getState().status === "offline") {
+      this.setState("reconnecting");
+      return;
+    }
+
+    this.setState("error");
   };
 
   private readonly handleReconnectAttempt = () => {
-    this.setState('reconnecting');
+    console.log("reconnecting attempt");
+    const socket = getSocketClient();
+    if (this.accessToken) {
+      this.applyAuth(socket, this.accessToken);
+    }
+    this.setState("reconnecting");
   };
 
   private readonly handleReconnect = () => {
-    this.setState('connected');
+    this.refreshingAuth = false;
+    this.authRetryUsed = false;
+    this.setState("connected");
+  };
+
+  private readonly handleReconnectFailed = () => {
+    if (this.intentionalDisconnect) {
+      return;
+    }
+    this.setState("error");
   };
 }
 

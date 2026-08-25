@@ -30,6 +30,8 @@ type QueuedRequest = {
   reject: (reason?: unknown) => void;
 };
 
+const ACCESS_TOKEN_SKEW_MS = 30_000;
+
 export const api = axios.create({
   baseURL: env.apiUrl,
   timeout: 15_000,
@@ -39,8 +41,34 @@ export const api = axios.create({
   },
 });
 
-let isRefreshing = false;
+let refreshPromise: Promise<void> | null = null;
+let isFlushScheduled = false;
 const refreshQueue: QueuedRequest[] = [];
+
+function getJwtExpMs(token: string): number | null {
+  try {
+    const parts = token.split(".");
+    if (parts.length < 2 || !parts[1]) {
+      return null;
+    }
+
+    const base64 = parts[1].replace(/-/g, "+").replace(/_/g, "/");
+    const padded = `${base64}${"=".repeat((4 - (base64.length % 4)) % 4)}`;
+    const payload = JSON.parse(atob(padded)) as { exp?: unknown };
+
+    return typeof payload.exp === "number" ? payload.exp * 1000 : null;
+  } catch {
+    return null;
+  }
+}
+
+function isAccessTokenFresh(token: string): boolean {
+  const expMs = getJwtExpMs(token);
+  if (expMs === null) {
+    return false;
+  }
+  return expMs - ACCESS_TOKEN_SKEW_MS > Date.now();
+}
 
 async function persistRefreshedTokens(data: {
   accessToken: string;
@@ -59,17 +87,69 @@ async function persistRefreshedTokens(data: {
 }
 
 async function runSingleFlightRefresh() {
-  const refreshToken = await getRefreshToken();
-  if (!refreshToken) {
-    throw new Error("Missing refresh token");
+  if (!refreshPromise) {
+    refreshPromise = (async () => {
+      const refreshToken = await getRefreshToken();
+      if (!refreshToken) {
+        throw new Error("Missing refresh token");
+      }
+
+      const { data } = await api.post<{
+        accessToken: string;
+        refreshToken?: string;
+      }>("/auth/refresh", { refreshToken }, { skipAuth: true });
+
+      await persistRefreshedTokens(data);
+    })().finally(() => {
+      refreshPromise = null;
+    });
   }
 
-  const { data } = await api.post<{
-    accessToken: string;
-    refreshToken?: string;
-  }>("/auth/refresh", { refreshToken }, { skipAuth: true });
+  return refreshPromise;
+}
 
-  await persistRefreshedTokens(data);
+function scheduleQueueFlush(promise: Promise<void>) {
+  if (isFlushScheduled) {
+    return;
+  }
+
+  isFlushScheduled = true;
+  void promise
+    .then(async () => {
+      await flushQueue(null);
+    })
+    .catch(async (refreshError) => {
+      await deleteTokens();
+      emitSessionExpired();
+      await flushQueue(normalizeApiError(refreshError));
+    })
+    .finally(() => {
+      isFlushScheduled = false;
+    });
+}
+
+/**
+ * Returns a usable access token, refreshing via the shared single-flight
+ * path when the current token is missing expiry data, expired, or near expiry.
+ */
+export async function ensureValidAccessToken(): Promise<string | null> {
+  const token = await getAccessToken();
+  if (!token) {
+    return null;
+  }
+
+  if (isAccessTokenFresh(token)) {
+    return token;
+  }
+
+  try {
+    await runSingleFlightRefresh();
+    return await getAccessToken();
+  } catch {
+    await deleteTokens();
+    emitSessionExpired();
+    return null;
+  }
 }
 
 async function flushQueue(error: unknown | null) {
@@ -129,25 +209,7 @@ api.interceptors.response.use(
 
     return new Promise<AxiosResponse>((resolve, reject) => {
       refreshQueue.push({ config, resolve, reject });
-
-      if (isRefreshing) {
-        return;
-      }
-
-      isRefreshing = true;
-
-      void runSingleFlightRefresh()
-        .then(async () => {
-          await flushQueue(null);
-        })
-        .catch(async (refreshError) => {
-          await deleteTokens();
-          emitSessionExpired();
-          await flushQueue(normalizeApiError(refreshError));
-        })
-        .finally(() => {
-          isRefreshing = false;
-        });
+      scheduleQueueFlush(runSingleFlightRefresh());
     });
   },
 );
