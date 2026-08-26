@@ -1,4 +1,4 @@
-import { sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
+import { integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core';
 
 export const MESSAGE_STATUS = {
   PENDING: 'PENDING',
@@ -26,6 +26,9 @@ export const messages = sqliteTable(
     status: text('status').notNull(),
     clientCreatedAt: text('client_created_at').notNull(),
     serverCreatedAt: text('server_created_at'),
+    attemptCount: integer('attempt_count').notNull().default(0),
+    lastAttemptAt: text('last_attempt_at'),
+    lastError: text('last_error'),
   },
   (table) => [uniqueIndex('messages_id_unique').on(table.id)],
 );

@@ -11,7 +11,7 @@ alwaysApply: true
 
 - **Feature assets:** if an image is used only by one feature, keep it under `src/features/<name>/assets/` and require it relatively from that feature. Shared brand assets (logo, spinner, onboarding art, etc.) stay in `src/assets/` and are consumed via `IMAGES` from `@shared/constants`.
 - Shared code lives under `src/shared/` (organized by use):
-  - `api/` — Axios client + errors`business/` · `services/` (legacy HTTP helpers)
+  - `api/` — Axios client + errors`business/` · `services/`
   - `components/` — shared UI for features.
   - `ui/` - shared UI elements (input, button etc.).
 - Core shell lives under `src/core/`:

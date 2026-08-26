@@ -88,6 +88,9 @@ content_type
 status
 client_created_at
 server_created_at (nullable)
+attempt_count (retry attempt count)
+last_attempt_at (last retry attempt)
+last_error (last retry error)
 }
 
 ## Constraints
@@ -96,6 +99,7 @@ server_created_at (nullable)
 - `conversation_id` references to `conversations.id`.
 - `sender_id` references to `users.id`.
 - `id` is the server-generated message ID and is nullable until server acknowledgment.
+- `attempt_count` should represent the current retry cycle, not the lifetime of the message.
 
 ## Local Status
 
@@ -103,5 +107,13 @@ PENDING
 SENDING
 SENT
 FAILED
+
+## Last error codes
+
+NETWORK_UNAVAILABLE
+SOCKET_DISCONNECTED
+SEND_TIMEOUT
+SERVER_UNAVAILABLE
+UNAUTHORIZED
 
 ---

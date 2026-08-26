@@ -5,6 +5,7 @@ import m0000 from './0000_magical_norrin_radd.sql';
 import m0001 from './0001_happy_morph.sql';
 import m0002 from './0002_nappy_freak.sql';
 import m0003 from './0003_fresh_whirlwind.sql';
+import m0004 from './0004_tranquil_thing.sql';
 
   export default {
     journal,
@@ -12,7 +13,8 @@ import m0003 from './0003_fresh_whirlwind.sql';
       m0000,
 m0001,
 m0002,
-m0003
+m0003,
+m0004
     }
   }
   
