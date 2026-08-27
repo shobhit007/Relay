@@ -7,4 +7,5 @@ export {
 } from './db/schema';
 export { messageService } from './services/message.service';
 export { registerMessageInboundHandlers } from './socket/inbound';
+export { messageRetryCoordinator } from './retry';
 export { ChatScreen } from './screens/ChatScreen';

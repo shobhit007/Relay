@@ -4,7 +4,10 @@ import { View } from 'react-native';
 import { useAuth } from '@/core/context/AuthContext';
 import { onAccessTokenRefreshed } from '@/core/session/token-bridge';
 import { getAccessToken } from '@/core/storage/secure-store';
-import { registerMessageInboundHandlers } from '@features/messages';
+import {
+  messageRetryCoordinator,
+  registerMessageInboundHandlers,
+} from '@features/messages';
 import { useUser } from '@features/user';
 import { socketManager } from '@shared/socket';
 
@@ -58,9 +61,28 @@ export function SocketProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
+    messageRetryCoordinator.start();
+
+    let previous = socketManager.getConnectionState();
+    const unsubscribeConnection = socketManager.subscribeConnectionState(
+      (state) => {
+        if (state === 'connected' && previous !== 'connected') {
+          messageRetryCoordinator.kick('socket');
+        }
+        previous = state;
+      },
+    );
+
+    // If already connected when the provider mounts, flush pending outbox.
+    if (previous === 'connected') {
+      messageRetryCoordinator.kick('socket');
+    }
+
     socketManager.startNetworkGate();
 
     return () => {
+      unsubscribeConnection();
+      messageRetryCoordinator.stop();
       socketManager.stopNetworkGate();
       socketManager.disconnect();
     };

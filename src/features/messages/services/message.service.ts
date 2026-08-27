@@ -2,15 +2,13 @@ import { db } from '@/core/db/client';
 import { conversationService } from '@features/conversations';
 import { createLocalId } from '@shared/utils/id';
 import {
-  SOCKET_EVENTS,
-  socketManager,
   type MessageAckPayload,
   type MessageErrorPayload,
-  type MessageSendPayload,
 } from '@shared/socket';
 
 import { messageRepository } from '../db/repository';
 import { MESSAGE_STATUS } from '../db/schema';
+import { isPermanentError, messageRetryCoordinator } from '../retry';
 import { buildMessagePreview } from '../utils/message-preview';
 import {
   validateIncomingMessagePayload,
@@ -44,7 +42,6 @@ export class MessageService {
     }
 
     let localConversationId = input.conversationId;
-    let serverId: string | null = null;
     let recipientId = input.recipientId;
 
     if (localConversationId) {
@@ -52,7 +49,6 @@ export class MessageService {
       if (!existing) {
         throw new Error('Conversation not found');
       }
-      serverId = existing.serverId;
       if (!recipientId) {
         const peer = await conversationService.getChatPeer(input.currentUserId, {
           conversationId: localConversationId,
@@ -65,7 +61,6 @@ export class MessageService {
         recipientId,
       );
       localConversationId = ensured.id;
-      serverId = ensured.serverId;
     } else {
       throw new Error('conversationId or recipientId is required');
     }
@@ -101,19 +96,7 @@ export class MessageService {
       );
     });
 
-    const payload: MessageSendPayload = {
-      clientId,
-      content,
-      contentType: 'TEXT',
-    };
-
-    if (serverId) {
-      payload.conversationId = serverId;
-    } else if (recipientId) {
-      payload.recipientId = recipientId;
-    }
-
-    socketManager.emit(SOCKET_EVENTS.MESSAGE_SEND, payload);
+    messageRetryCoordinator.enqueue(clientId);
 
     return {
       localConversationId: localConversationId!,
@@ -180,6 +163,8 @@ export class MessageService {
         tx,
       );
     });
+
+    messageRetryCoordinator.notifyAck(message.clientId);
   }
 
   async handleMessageError(payload: unknown): Promise<void> {
@@ -192,7 +177,25 @@ export class MessageService {
       return;
     }
 
-    await messageRepository.markFailed(data.clientId);
+    const code = data.code || 'SERVER_UNAVAILABLE';
+    const handled = messageRetryCoordinator.notifyError(data.clientId, code);
+    if (handled) {
+      return;
+    }
+
+    // No in-flight waiter — apply outcome directly.
+    if (isPermanentError(code)) {
+      await messageRepository.markFailed(data.clientId, code);
+      return;
+    }
+
+    const local = await messageRepository.findByClientId(data.clientId);
+    await messageRepository.markTransientFailure({
+      clientId: data.clientId,
+      attemptCount: local?.attemptCount ?? 0,
+      lastAttemptAt: local?.lastAttemptAt ?? new Date().toISOString(),
+      lastError: code,
+    });
   }
 
   private async persistIncomingMessage(
