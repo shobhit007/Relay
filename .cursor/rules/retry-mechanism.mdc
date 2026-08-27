@@ -31,3 +31,102 @@ reconnectionDelayMax: 10000ms
 randomizationFactor: default
 
 - do not retry socket.io reconnection if network is not available.
+
+---
+
+# Message Retry Flow
+
+                  LOCAL MESSAGE
+                       │
+                       ▼
+                    PENDING
+                       │
+                       ▼
+                   SENDING
+                       │
+            ┌──────────┼──────────┐
+            │          │          │
+          ACK      transient   permanent
+            │        error       error
+            ▼          │          ▼
+          SENT         │        FAILED
+                       │
+                 retry/backoff
+                       │
+                  attempt 2
+                       │
+                 retry/backoff
+                       │
+                  attempt 3
+                       │
+              ┌────────┴────────┐
+              │                 │
+           success          exhausted
+              │                 │
+             SENT             WAIT
+                                │
+                    ┌───────────┼───────────┐
+                    │           │           │
+                 reconnect      |       foreground
+                    │           │           │
+                    └───────────┴───────────┘
+                                │
+                          new retry cycle
+
+- Retry `messages sequentially` within each conversation, while allowing `bounded concurrency` across conversations with maximum of 3 active conversations.
+- Do not start retry cycle if network is not available.
+
+---
+
+## Transient Error
+
+- No network
+- Socket disconnected
+- Request timeout
+- Temporary server error
+
+## Permanent Error
+
+- Invalid payload
+- Invalid content type
+- Unauthorized
+- Not a conversation participant
+- Conversation permanently unavailable
+
+- `Transient` failure ≠ `FAILED`.
+- Permanent server rejection -> `FAILED` immediately.
+
+---
+
+## Retry/Exponential Backoff
+
+- Each send attempt has a `timeout` of `5s`.
+- Maximum 3 `automatic` attempts per `retry` cycle.
+- `Transient` failures get `exponential backoff`.
+- `Exhausting` a cycle does not `fail` the `message`.
+- Other `messages` can `continue` after the cycle is `exhausted`.
+
+---
+
+## Retry Triggers
+
+- Socket `reconnects`.
+- Network becomes `available`.
+- App returns `foreground`.
+
+3 attempts exhausted
+↓
+message remains retryable
+↓
+WAIT
+│
+├── Socket reconnect
+├── Network available
+├── App foreground
+↓
+start new retry cycle
+
+- Prevent `multiple` triggers from starting `concurrent` retry cycles for the same `message`.
+- `in-flight coordination`, So only one delivery attempt is active for a give `clientId`.
+
+---
