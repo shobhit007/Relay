@@ -32,6 +32,19 @@ randomizationFactor: default
 
 - do not retry socket.io reconnection if network is not available.
 
+## Socket reconnect triggers
+
+- Network becomes `available`.
+- App returns `foreground`.
+
+App foreground
+↓
+Network available
+↓
+disconnect socket
+↓
+connect socket
+
 ---
 
 # Message Retry Flow
@@ -111,8 +124,6 @@ randomizationFactor: default
 ## Retry Triggers
 
 - Socket `reconnects`.
-- Network becomes `available`.
-- App returns `foreground`.
 
 3 attempts exhausted
 ↓
