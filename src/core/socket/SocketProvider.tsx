@@ -79,10 +79,12 @@ export function SocketProvider({ children }: { children: ReactNode }) {
     }
 
     socketManager.startNetworkGate();
+    socketManager.startForegroundGate();
 
     return () => {
       unsubscribeConnection();
       messageRetryCoordinator.stop();
+      socketManager.stopForegroundGate();
       socketManager.stopNetworkGate();
       socketManager.disconnect();
     };

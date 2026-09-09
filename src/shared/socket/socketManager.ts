@@ -1,3 +1,4 @@
+import { appStateManager } from "@/core/app-state";
 import { networkManager } from "@/core/network";
 import { ensureValidAccessToken } from "@shared/api";
 
@@ -16,6 +17,7 @@ export type SocketConnectionState =
   | "error";
 
 type ConnectionStateListener = (state: SocketConnectionState) => void;
+type ResumeReason = "network" | "foreground";
 
 class SocketManager {
   private state: SocketConnectionState = "disconnected";
@@ -28,8 +30,11 @@ class SocketManager {
   private intentionalDisconnect = false;
   private accessToken: string | null = null;
   private unsubscribeNetwork: (() => void) | null = null;
+  private unsubscribeAppState: (() => void) | null = null;
   private refreshingAuth = false;
   private authRetryUsed = false;
+  private resumeInFlight = false;
+  private lastAppActive = appStateManager.getState().isActive;
 
   getConnectionState(): SocketConnectionState {
     return this.state;
@@ -53,6 +58,8 @@ class SocketManager {
     ) => {
       const socket = getSocketClient();
 
+      console.log("current network state:: ", network);
+
       if (network.status === "offline") {
         socket.io.reconnection(false);
         return;
@@ -63,16 +70,7 @@ class SocketManager {
       }
 
       socket.io.reconnection(true);
-
-      if (this.intentionalDisconnect || !this.accessToken || socket.connected) {
-        return;
-      }
-
-      this.applyAuth(socket, this.accessToken);
-      this.bindLifecycle(socket);
-      this.rebindFeatureHandlers(socket);
-      this.setState("reconnecting");
-      socket.connect();
+      this.requestResumeConnect("network");
     };
 
     this.unsubscribeNetwork = networkManager.subscribe(applyNetworkState);
@@ -82,6 +80,30 @@ class SocketManager {
   stopNetworkGate(): void {
     this.unsubscribeNetwork?.();
     this.unsubscribeNetwork = null;
+  }
+
+  startForegroundGate(): void {
+    if (this.unsubscribeAppState) {
+      return;
+    }
+
+    this.lastAppActive = appStateManager.getState().isActive;
+
+    this.unsubscribeAppState = appStateManager.subscribe((next) => {
+      const wasActive = this.lastAppActive;
+      this.lastAppActive = next.isActive;
+
+      if (!next.isActive || wasActive) {
+        return;
+      }
+
+      this.requestResumeConnect("foreground");
+    });
+  }
+
+  stopForegroundGate(): void {
+    this.unsubscribeAppState?.();
+    this.unsubscribeAppState = null;
   }
 
   connect(token: string): void {
@@ -96,6 +118,7 @@ class SocketManager {
     this.rebindFeatureHandlers(socket);
 
     if (socket.connected) {
+      this.resumeInFlight = false;
       this.setState("connected");
       return;
     }
@@ -108,6 +131,7 @@ class SocketManager {
     this.intentionalDisconnect = true;
     this.accessToken = null;
     this.refreshingAuth = false;
+    this.resumeInFlight = false;
     const socket = getSocketClient();
     socket.io.reconnection(false);
     this.unbindLifecycle(socket);
@@ -177,11 +201,47 @@ class SocketManager {
 
   destroy(): void {
     this.stopNetworkGate();
+    this.stopForegroundGate();
     this.disconnect();
     this.featureHandlers.clear();
     this.stateListeners.clear();
     resetSocketClient();
     this.lifecycleBound = false;
+  }
+
+  /**
+   * Shared single-flight resume used by network-online and app-foreground gates.
+   */
+  private requestResumeConnect(_reason: ResumeReason): void {
+    if (this.intentionalDisconnect || !this.accessToken) {
+      return;
+    }
+
+    if (networkManager.getState().status !== "online") {
+      return;
+    }
+
+    const socket = getSocketClient();
+    if (socket.connected) {
+      return;
+    }
+
+    if (this.resumeInFlight) {
+      return;
+    }
+
+    this.resumeInFlight = true;
+
+    this.applyAuth(socket, this.accessToken);
+    this.bindLifecycle(socket);
+    this.rebindFeatureHandlers(socket);
+    this.syncReconnectionEnabled(socket);
+    this.setState("reconnecting");
+    socket.connect();
+  }
+
+  private clearResumeInFlight(): void {
+    this.resumeInFlight = false;
   }
 
   private applyAuth(socket: AppSocket, token: string) {
@@ -289,16 +349,18 @@ class SocketManager {
   private readonly handleConnect = () => {
     this.refreshingAuth = false;
     this.authRetryUsed = false;
+    this.clearResumeInFlight();
     this.setState("connected");
   };
 
   private readonly handleDisconnect = () => {
     if (this.intentionalDisconnect) {
+      this.clearResumeInFlight();
       this.setState("disconnected");
       return;
     }
 
-    this.setState("reconnecting");
+    this.setState("disconnected");
 
     if (networkManager.getState().status === "offline") {
       getSocketClient().io.reconnection(false);
@@ -310,6 +372,7 @@ class SocketManager {
 
   private readonly handleConnectError = (error: Error) => {
     if (this.intentionalDisconnect) {
+      this.clearResumeInFlight();
       return;
     }
 
@@ -349,9 +412,12 @@ class SocketManager {
         })
         .finally(() => {
           this.refreshingAuth = false;
+          this.clearResumeInFlight();
         });
       return;
     }
+
+    this.clearResumeInFlight();
 
     if (networkManager.getState().status === "offline") {
       this.setState("reconnecting");
@@ -373,6 +439,7 @@ class SocketManager {
   private readonly handleReconnect = () => {
     this.refreshingAuth = false;
     this.authRetryUsed = false;
+    this.clearResumeInFlight();
     this.setState("connected");
   };
 
@@ -380,6 +447,7 @@ class SocketManager {
     if (this.intentionalDisconnect) {
       return;
     }
+    this.clearResumeInFlight();
     this.setState("error");
   };
 }

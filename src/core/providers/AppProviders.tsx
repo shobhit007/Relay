@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import { KeyboardProvider } from 'react-native-keyboard-controller';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 
+import { AppStateProvider } from '@/core/app-state';
 import { AuthProvider } from '@/core/context/AuthContext';
 import { NetworkProvider } from '@/core/network';
 import { SocketProvider } from '@/core/socket/SocketProvider';
@@ -17,9 +18,11 @@ export function AppProviders({ children }: { children: ReactNode }) {
           <KeyboardProvider>
             <ToastProvider>
               <NetworkProvider>
-                <AuthProvider>
-                  <SocketProvider>{children}</SocketProvider>
-                </AuthProvider>
+                <AppStateProvider>
+                  <AuthProvider>
+                    <SocketProvider>{children}</SocketProvider>
+                  </AuthProvider>
+                </AppStateProvider>
               </NetworkProvider>
             </ToastProvider>
           </KeyboardProvider>
