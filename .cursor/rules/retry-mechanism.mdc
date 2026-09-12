@@ -78,13 +78,8 @@ connect socket
               │                 │
              SENT             WAIT
                                 │
-                    ┌───────────┼───────────┐
-                    │           │           │
-                 reconnect      |       foreground
-                    │           │           │
-                    └───────────┴───────────┘
                                 │
-                          new retry cycle
+                          new retry cycle (foreground/network)
 
 - Retry `messages sequentially` within each conversation, while allowing `bounded concurrency` across conversations with maximum of 3 active conversations.
 - Do not start retry cycle if network is not available.

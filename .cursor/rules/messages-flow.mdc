@@ -52,3 +52,35 @@ client id -> server id
 - Server communication uses `server_id` once available.
 - SQLite relationships continue using the local primary key.
 - The server ID is the canonical identity for server operations.
+
+---
+
+## Message Syncronization
+
+Open Chat
+↓
+SQLite Lookup
+↓
+UI
+↓
+Start Sync
+↓
+Conversation Id, cursor (last message id)
+↓
+Server
+↓
+Sync messages
+↓
+Reconciliation conversation, message
+↓
+UI
+
+## Triggers
+
+- `socket` reconnects
+
+### Rules
+
+- SQLite look
+- `Syncronization` should happen after SQLite
+- `socket` reconnect triggers synchronization only if a chat is open
