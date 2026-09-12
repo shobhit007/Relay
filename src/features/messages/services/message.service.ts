@@ -6,6 +6,7 @@ import {
   type MessageErrorPayload,
 } from '@shared/socket';
 
+import { fetchConversationMessages } from '../api/messages.api';
 import { messageRepository } from '../db/repository';
 import { MESSAGE_STATUS } from '../db/schema';
 import { isPermanentError, messageRetryCoordinator } from '../retry';
@@ -195,6 +196,75 @@ export class MessageService {
       attemptCount: local?.attemptCount ?? 0,
       lastAttemptAt: local?.lastAttemptAt ?? new Date().toISOString(),
       lastError: code,
+    });
+  }
+
+  /**
+   * HTTP catch-up while a chat is open: fetch messages after the newest local
+   * server message id, upsert by clientId, refresh last_message_* (no unread bump).
+   */
+  async syncConversationMessages(input: {
+    localConversationId: string;
+    currentUserId: string;
+  }): Promise<void> {
+    const conversation = await conversationService.findById(
+      input.localConversationId,
+    );
+    if (!conversation?.serverId) {
+      return;
+    }
+
+    const after = await messageRepository.findLatestServerMessageId(
+      input.localConversationId,
+    );
+
+    const remote = await fetchConversationMessages({
+      serverConversationId: conversation.serverId,
+      ...(after ? { after } : {}),
+    });
+
+    if (remote.length === 0) {
+      return;
+    }
+
+    await db.transaction(async (tx) => {
+      for (const message of remote) {
+        const createdAt = toIsoString(message.createdAt);
+        await messageRepository.upsertIncoming(
+          {
+            id: message.id,
+            clientId: message.clientId,
+            conversationId: input.localConversationId,
+            senderId: message.senderId,
+            content: message.content,
+            contentType: message.contentType,
+            status: MESSAGE_STATUS.SENT,
+            clientCreatedAt: createdAt,
+            serverCreatedAt: createdAt,
+          },
+          tx,
+        );
+      }
+
+      const newest = remote[remote.length - 1]!;
+      const newestAt = toIsoString(newest.createdAt);
+      const existing = await conversationService.findById(
+        input.localConversationId,
+        tx,
+      );
+      const existingAt = existing?.lastMessageAt;
+      if (!existingAt || newestAt >= existingAt) {
+        await conversationService.updateLastMessage(
+          {
+            conversationId: input.localConversationId,
+            lastMessageId: newest.id,
+            lastMessagePreview: buildMessagePreview(newest.content),
+            lastMessageAt: newestAt,
+            updatedAt: newestAt,
+          },
+          tx,
+        );
+      }
     });
   }
 

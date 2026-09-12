@@ -5,7 +5,9 @@ import { useAuth } from '@/core/context/AuthContext';
 import { onAccessTokenRefreshed } from '@/core/session/token-bridge';
 import { getAccessToken } from '@/core/storage/secure-store';
 import {
+  getActiveChat,
   messageRetryCoordinator,
+  messageService,
   registerMessageInboundHandlers,
 } from '@features/messages';
 import { useUser } from '@features/user';
@@ -68,6 +70,18 @@ export function SocketProvider({ children }: { children: ReactNode }) {
       (state) => {
         if (state === 'connected' && previous !== 'connected') {
           messageRetryCoordinator.kick('socket');
+
+          const active = getActiveChat();
+          if (active) {
+            void messageService
+              .syncConversationMessages({
+                localConversationId: active.localConversationId,
+                currentUserId: active.currentUserId,
+              })
+              .catch((error) => {
+                console.warn('Message sync on reconnect failed', error);
+              });
+          }
         }
         previous = state;
       },

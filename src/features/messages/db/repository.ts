@@ -1,4 +1,4 @@
-import { and, asc, eq, gte, inArray } from 'drizzle-orm';
+import { and, asc, desc, eq, gte, inArray, isNotNull } from 'drizzle-orm';
 
 import { db } from '@/core/db/client';
 import type { DbExecutor } from '@/core/db/types';
@@ -20,6 +20,25 @@ export class MessageRepository {
       .limit(1);
 
     return row ?? null;
+  }
+
+  async findLatestServerMessageId(
+    localConversationId: string,
+    executor: DbExecutor = db,
+  ): Promise<string | null> {
+    const [row] = await executor
+      .select({ id: messages.id })
+      .from(messages)
+      .where(
+        and(
+          eq(messages.conversationId, localConversationId),
+          isNotNull(messages.id),
+        ),
+      )
+      .orderBy(desc(messages.serverCreatedAt), desc(messages.clientCreatedAt))
+      .limit(1);
+
+    return row?.id ?? null;
   }
 
   async listRetryable(executor: DbExecutor = db): Promise<LocalMessage[]> {

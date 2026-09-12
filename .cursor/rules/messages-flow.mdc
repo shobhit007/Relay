@@ -55,32 +55,43 @@ client id -> server id
 
 ---
 
-## Message Syncronization
+## Message Synchronization
 
 Open Chat
 ↓
-SQLite Lookup
+SQLite live query (bind UI first)
 ↓
-UI
+UI renders local messages
 ↓
-Start Sync
+Background HTTP sync
 ↓
-Conversation Id, cursor (last message id)
+`GET /conversations/:serverConversationId/messages?after=<serverMessageId>&limit=50`
 ↓
-Server
+Upsert by `clientId` + refresh `last_message_*`
 ↓
-Sync messages
-↓
-Reconciliation conversation, message
-↓
-UI
+Live query updates UI
 
-## Triggers
+### HTTP catch-up
 
-- `socket` reconnects
+- Path: `GET /conversations/:conversationId/messages`
+- Query: optional `after` (server message UUID), optional `limit` (default 50, max 100)
+- Cursor = newest local message with non-null server `id`, ordered by `serverCreatedAt` then `clientCreatedAt`
+- Omit `after` when there is no local server message → server returns the latest page (ascending in the response)
+- Request uses the conversation **server** id; local SQLite rows keep the **local** conversation id
+
+### Reconciliation
+
+- Upsert each remote message by `clientId` with `status = SENT`
+- Map payload `conversationId` (server) → local conversation id already known by the open chat
+- Update conversation `last_message_*` from the newest synced message (no unread bump while viewing)
+
+### Triggers
+
+- Open chat: after SQLite binding, fire background `syncConversationMessages` when the conversation has a `serverId`
+- Socket reconnect (`connected`): sync **only if** a chat is open (active-chat bridge registers local conversation id on ChatScreen mount and clears on unmount)
 
 ### Rules
 
-- SQLite look
-- `Syncronization` should happen after SQLite
-- `socket` reconnect triggers synchronization only if a chat is open
+- Synchronization happens after SQLite / UI, never blocks first paint on network
+- Socket reconnect does not sync when no chat is open
+- Temp chats without `serverId` skip HTTP sync

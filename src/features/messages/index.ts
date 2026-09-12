@@ -9,3 +9,4 @@ export { messageService } from './services/message.service';
 export { registerMessageInboundHandlers } from './socket/inbound';
 export { messageRetryCoordinator } from './retry';
 export { ChatScreen } from './screens/ChatScreen';
+export { getActiveChat, setActiveChat } from './sync/active-chat-bridge';
